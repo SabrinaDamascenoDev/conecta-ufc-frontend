@@ -1,73 +1,47 @@
-# React + TypeScript + Vite
+# Conecta-UFC
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema web desenvolvido com **React + TypeScript + Vite** para centralizar oportunidades acadêmicas da UFC, como bolsas, estágios, editais, seleções e eventos.
 
-Currently, two official plugins are available:
+O objetivo da plataforma é facilitar o acesso dos estudantes às oportunidades acadêmicas, reduzindo a necessidade de acompanhar múltiplos portais, redes sociais e grupos informais.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 📌 Sobre o Projeto
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+O **Conecta-UFC** nasceu da necessidade de resolver a dificuldade que estudantes enfrentam para acompanhar oportunidades acadêmicas da universidade.
 
-## Expanding the ESLint configuration
+Atualmente, muitas informações estão espalhadas em:
+- Sites institucionais
+- Redes sociais
+- Grupos de WhatsApp/Telegram
+- Páginas de laboratórios e projetos
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+A proposta do sistema é oferecer uma experiência centralizada, intuitiva e acessível para consulta dessas oportunidades.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## 🚀 Tecnologias Utilizadas
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- ⚛️ React
+- 🔷 TypeScript
+- ⚡ Vite
+- 🎨 CSS / Styled Components / Tailwind
+- 🌐 Axios
+- 🔐 JWT Authentication
+- 🐍 FastAPI (backend)
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 📂 Estrutura do Projeto
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+```bash
+src/
+├── assets/         # Imagens e arquivos estáticos
+├── components/     # Componentes reutilizáveis
+├── pages/          # Páginas da aplicação
+├── routes/         # Configuração de rotas
+├── services/       # Comunicação com API
+├── styles/         # Estilos globais
+├── types/          # Tipagens TypeScript
+├── utils/          # Funções utilitárias
+└── main.tsx
