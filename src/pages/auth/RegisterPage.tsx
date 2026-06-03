@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mail, Lock, Eye, EyeOff, Check, ChevronDown } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { LeftPanel } from "./components/LeftPanel";
 import {
@@ -7,7 +7,6 @@ import {
   SelectGroup,
   SelectTrigger,
   SelectValue,
-  SelectLabel,
   SelectItem,
   SelectContent,
 } from "../../components/ui/select";
