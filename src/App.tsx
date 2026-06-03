@@ -1,14 +1,5 @@
-import './App.css'
-
-function App() {
-
-  return (
-    <>
-      <section id="center">
-        <h1>oi</h1>
-      </section>
-    </>
-  )
+// src/App.tsx
+import AppRouter from "@/routes/AppRouter";
+export default function App() {
+  return <AppRouter />;
 }
-
-export default App
