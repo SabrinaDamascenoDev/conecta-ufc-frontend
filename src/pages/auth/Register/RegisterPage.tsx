@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Mail, Lock, Eye, EyeOff, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { LeftPanel } from "./components/LeftPanel";
+import { LeftPanel } from "../components/LeftPanel";
 import {
   Select,
   SelectGroup,
@@ -9,7 +9,8 @@ import {
   SelectValue,
   SelectItem,
   SelectContent,
-} from "../../components/ui/select";
+} from "../../../components/ui/select";
+import { NavagateBar } from "../components/NavegateBar";
 
 const OPPORTUNITY_TAGS = [
   "PAID",
@@ -80,17 +81,7 @@ export default function RegisterPage() {
 
       <div className="flex-1 flex items-center justify-center p-3 bg-white">
         <div className="w-full max-w-md">
-          <div className="flex gap-6 mb-8 border-b border-gray-200">
-            <button
-              className="pb-3 text-sm text-gray-400 hover:text-gray-600 transition-colors"
-              onClick={() => navigate("/login")}
-            >
-              Entrar
-            </button>
-            <button className="pb-3 text-sm font-semibold text-ufc border-b-2 border-ufc">
-              Criar Conta
-            </button>
-          </div>
+          <NavagateBar />
 
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Cadastre-se na plataforma
@@ -225,7 +216,7 @@ export default function RegisterPage() {
               </div>
 
               <button
-                className="w-full bg-ufc hover:bg-blue-900 text-white font-medium py-4 rounded-xl transition-colors mt-4"
+                className="w-full bg-ufc text-white font-medium py-4 rounded-xl transition-colors mt-4"
                 onClick={() => navigate("/dashboard")}
               >
                 Acessar a plataforma

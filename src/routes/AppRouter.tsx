@@ -1,7 +1,7 @@
 // src/routes/AppRouter.tsx
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "@/pages/auth/LoginPage";
-import RegisterPage from "@/pages/auth/RegisterPage";
+import LoginPage from "@/pages/auth/Login/LoginPage";
+import RegisterPage from "@/pages/auth/Register/RegisterPage";
 
 export default function AppRouter() {
   return (
