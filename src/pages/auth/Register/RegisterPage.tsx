@@ -1,16 +1,20 @@
 import { useState } from "react";
-import { Mail, Lock, Eye, EyeOff, Check, ChevronDown } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { LeftPanel } from "./components/LeftPanel";
+import { LeftPanel } from "../components/LeftPanel";
 import {
   Select,
   SelectGroup,
   SelectTrigger,
   SelectValue,
-  SelectLabel,
   SelectItem,
   SelectContent,
-} from "../../components/ui/select";
+} from "../../../components/ui/select";
+import { NavagateBar } from "../components/NavegateBar";
+import { useForm, Controller } from "react-hook-form"
+import { type RegisterSchemaData, registerSchema } from "./schema";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { StepIndicator } from "../components/StepIndicator";
 
 const OPPORTUNITY_TAGS = [
   "PAID",
@@ -23,45 +27,6 @@ const OPPORTUNITY_TAGS = [
   "Extenção",
 ];
 
-function StepIndicator({ step }: { step: 1 | 2 }) {
-  return (
-    <div className="flex items-center gap-3 mb-8 max-w-[150px]">
-      <div className="flex flex-col items-center gap-1">
-        <div
-          className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
-            step === 1 ? "bg-ufc text-white" : "bg-ufc text-white"
-          }`}
-        >
-          {step > 1 ? <Check size={16} /> : "1"}
-        </div>
-        <span
-          className={`text-xs font-medium ${step === 1 ? "text-ufc" : "text-gray-400"}`}
-        >
-          Perfil
-        </span>
-      </div>
-
-      <div
-        className={`flex-1 h-0.5 mb-5 ${step >= 2 ? "bg-ufc" : "bg-gray-200"}`}
-      />
-
-      <div className="flex flex-col items-center gap-1">
-        <div
-          className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
-            step === 2 ? "bg-ufc text-white" : "bg-gray-200 text-gray-400"
-          }`}
-        >
-          2
-        </div>
-        <span
-          className={`text-xs font-medium ${step === 2 ? "text-ufc" : "text-gray-400"}`}
-        >
-          Alertas
-        </span>
-      </div>
-    </div>
-  );
-}
 
 export default function RegisterPage() {
   const [step, setStep] = useState<1 | 2>(1);
@@ -69,11 +34,31 @@ export default function RegisterPage() {
   const [selectedTags, setSelectedTags] = useState<string[]>([""]);
   const navigate = useNavigate();
 
+  const {
+    register, 
+    handleSubmit, 
+    control,
+    formState: { errors }, 
+  } = useForm<RegisterSchemaData>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      nome: '',
+      email: '',
+      curso: '',
+      senha: '',
+     }
+  })
+
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
+
+  function onSubmit(data: RegisterSchemaData) {
+    console.log(data)
+    setStep(2)
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -81,17 +66,7 @@ export default function RegisterPage() {
 
       <div className="flex-1 flex items-center justify-center p-3 bg-white">
         <div className="w-full max-w-md">
-          <div className="flex gap-6 mb-8 border-b border-gray-200">
-            <button
-              className="pb-3 text-sm text-gray-400 hover:text-gray-600 transition-colors"
-              onClick={() => navigate("/login")}
-            >
-              Entrar
-            </button>
-            <button className="pb-3 text-sm font-semibold text-ufc border-b-2 border-ufc">
-              Criar Conta
-            </button>
-          </div>
+          <NavagateBar />
 
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Cadastre-se na plataforma
@@ -104,7 +79,7 @@ export default function RegisterPage() {
           <StepIndicator step={step} />
 
           {step === 1 && (
-            <div className="space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               <div className="flex gap-4">
                 <div className="flex-1">
                   <label className="block text-sm text-gray-600 mb-1.5">
@@ -113,47 +88,46 @@ export default function RegisterPage() {
                   <input
                     type="text"
                     placeholder="nome"
+                    {...register("nome")}
                     className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all placeholder:text-gray-300"
                   />
-                </div>
+                  {errors.nome && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.nome.message}
+                    </p>
+                  )}
+                </div> 
+               
                 <div className="flex-1">
                   <label className="block text-sm text-gray-600 mb-1.5">
                     Curso
                   </label>
-                  <div className="relative">
-                    <Select>
-                      <SelectTrigger className="w-full border border-gray-200 rounded-xl px-4 py-5.5 text-sm  focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-gray-600 placeholder:text-gray-300">
-                        <SelectValue placeholder="Selecione seu curso" className="placeholder:text-gray-300" />
-                      </SelectTrigger>
-
-                      <SelectContent position="popper" sideOffset={4} className="bg-white">
-                        <SelectGroup>
-                          <SelectItem value="ciência-da-computação">
-                            Ciência da Computação
-                          </SelectItem>
-                          <SelectItem value="design-digital">
-                            Design Digital
-                          </SelectItem>
-                          <SelectItem value="engenharia-de-software">
-                            Engenharia de Software
-                          </SelectItem>
-                          <SelectItem value="engenharia-da-computacao">
-                            Engenharia da Computação
-                          </SelectItem>
-                          <SelectItem value="inteligencia-artificial">
-                            Inteligencia Artificial
-                          </SelectItem>
-                          <SelectItem value="redes-de-computadores">
-                            Redes de Computadores
-                          </SelectItem>
-                          <SelectItem value="sistemas-de-informacao">
-                            Sistemas de Informação
-                          </SelectItem>
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                  <Controller
+                    name="curso"
+                    control={control}
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <SelectTrigger className="w-full border border-gray-200 rounded-xl px-4 py-5.5 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all text-gray-600">
+                          <SelectValue placeholder="Selecione seu curso" className="placeholder:text-gray-300" />
+                        </SelectTrigger>
+                        <SelectContent position="popper" sideOffset={4} className="bg-white">
+                          <SelectGroup>
+                            <SelectItem value="ciência-da-computação">Ciência da Computação</SelectItem>
+                            <SelectItem value="design-digital">Design Digital</SelectItem>
+                            <SelectItem value="engenharia-de-software">Engenharia de Software</SelectItem>
+                            <SelectItem value="engenharia-da-computacao">Engenharia da Computação</SelectItem>
+                            <SelectItem value="inteligencia-artificial">Inteligencia Artificial</SelectItem>
+                            <SelectItem value="redes-de-computadores">Redes de Computadores</SelectItem>
+                            <SelectItem value="sistemas-de-informacao">Sistemas de Informação</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {errors.curso && (
+                    <p className="text-red-500 text-xs mt-1">{errors.curso.message}</p>
+                  )}
+              </div>
               </div>
 
               <div>
@@ -165,10 +139,16 @@ export default function RegisterPage() {
                   <input
                     type="email"
                     placeholder="email@alu.ufc.br"
+                    {...register("email")}
                     className="flex-1 outline-none text-sm text-gray-700 placeholder:text-gray-300 bg-transparent"
                   />
                 </div>
               </div>
+              {errors.email && (
+                  <p className="text-red-500 text-xs mt-1">
+                  {errors.email.message}
+                </p>
+              )}
 
               <div>
                 <label className="block text-sm text-gray-600 mb-1.5">
@@ -179,6 +159,7 @@ export default function RegisterPage() {
                   <input
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••••••••••"
+                    {...register("senha")}
                     className="flex-1 outline-none text-sm text-gray-700 placeholder:text-gray-300 bg-transparent"
                   />
                   <button
@@ -189,14 +170,19 @@ export default function RegisterPage() {
                   </button>
                 </div>
               </div>
+              {errors.senha && (
+                  <p className="text-red-500 text-xs mt-1">
+                  {errors.senha.message}
+                </p>
+              )}
 
               <button
                 className="w-full bg-blue-800 hover:bg-blue-900 text-white font-medium py-4 rounded-xl transition-colors flex items-center justify-center gap-2"
-                onClick={() => setStep(2)}
+                type="submit"
               >
                 Continuar cadastro <span className="text-lg">→</span>
               </button>
-            </div>
+            </form>
           )}
 
           {step === 2 && (
@@ -226,7 +212,7 @@ export default function RegisterPage() {
               </div>
 
               <button
-                className="w-full bg-ufc hover:bg-blue-900 text-white font-medium py-4 rounded-xl transition-colors mt-4"
+                className="w-full bg-ufc text-white font-medium py-4 rounded-xl transition-colors mt-4"
                 onClick={() => navigate("/dashboard")}
               >
                 Acessar a plataforma
