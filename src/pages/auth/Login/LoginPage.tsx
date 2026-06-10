@@ -25,7 +25,7 @@ export default function LoginPage() {
 
   function onSubmit(data: LoginSchemaData) {
     console.log(data);
-    navigate("/dashboard");
+    navigate("/vagas");
   }
 
   return (
