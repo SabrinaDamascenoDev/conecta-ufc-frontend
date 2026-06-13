@@ -1,4 +1,4 @@
-import { BookmarkIcon, Clock, Info, GraduationCap, FlaskConical, Monitor } from "lucide-react";
+import { BookmarkIcon, Clock, Info, GraduationCap, FlaskConical, Monitor, MicroscopeIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -14,6 +14,7 @@ function ProgramaIcon({ programa }: { programa: Vaga["programa"] }) {
   const base = "w-14 h-14 rounded-xl flex items-center justify-center bg-[#dce8f7]";
   if (programa === "PID") return <div className={base}><GraduationCap size={25} className="text-[#1a4fa0]" /></div>;
   if (programa === "PIBIC") return <div className={base}><FlaskConical size={25} className="text-[#1a4fa0]" /></div>;
+  if (programa === "P&D") return <div className={base}><MicroscopeIcon size={25} className="text-[#1a4fa0]" /></div>;
   return <div className={base}><Monitor size={25} className="text-[#1a4fa0]" /></div>;
 }
 
@@ -25,7 +26,7 @@ function encerraColor(dias: number) {
 
 export function VagaCard({ vaga, onSave, onSaberMais }: VagaCardProps) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 px-6 py-5 shadow-sm duration-200">
+    <div className="bg-[#F2F2F2] rounded-2xl px-6 py-5">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -39,7 +40,7 @@ export function VagaCard({ vaga, onSave, onSaberMais }: VagaCardProps) {
         </div>
         <Button
           size="sm"
-          className="shrink-0 bg-[#1a4fa0] hover:bg-[#153f85] text-white rounded-xl gap-2 text-sm font-semibold px-4 py-4 cursor-pointer"
+          className="shrink-0 bg-[#1a4fa0] hover:bg-[#153f85] text-white rounded-lg gap-2 text-sm font-semibold px-4 py-4 cursor-pointer"
           onClick={() => onSaberMais(vaga.id)}
         >
           <Info size={14} />

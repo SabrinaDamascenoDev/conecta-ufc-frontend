@@ -44,14 +44,14 @@ export default function Sair() {
           <DialogClose asChild>
             <Button
               variant="secondary"
-              className="flex-1 h-12 rounded-xl bg-gray-400 hover:bg-gray-500 text-white font-semibold text-base"
+              className="flex-1 h-12 rounded-xl bg-gray-400 hover:bg-gray-500 text-white font-semibold text-base cursor-pointer"
             >
               Voltar
             </Button>
           </DialogClose>
 
           <Button
-            className="flex-1 h-12 rounded-xl bg-[#cc0000] hover:bg-[#aa0000] text-white font-semibold text-base gap-2"
+            className="flex-1 h-12 rounded-xl bg-[#cc0000] hover:bg-[#aa0000] text-white font-semibold text-base gap-2 cursor-pointer"
             onClick={handleLogout}
           >
             <LogOut size={16} />

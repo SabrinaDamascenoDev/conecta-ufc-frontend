@@ -10,10 +10,11 @@ import Sair from "../components/Dialogs/Sair";
 
 type FilterOption = "Todas" | Programa;
 
-export function Vagas() {
+export function Salvos() {
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<FilterOption>("Todas");
   const [vagas, setVagas] = useState<Vaga[]>(vagasInitial);
+  const vagasSalvas = useMemo(() => vagas.filter((v) => v.salvo), [vagas]);
 
   const vagasFiltradas = useMemo(() => {
     let result = vagas;
@@ -42,6 +43,7 @@ export function Vagas() {
   function handleSaberMais(id: number) {
     alert(`Abrindo detalhes da vaga #${id}`);
   }
+
   
   return (
     <div className="flex min-h-screen bg-white font-sans">
@@ -62,8 +64,8 @@ export function Vagas() {
           <ProgramaFilter selected={filtro} onChange={setFiltro} />
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
-              <span className="text-foreground">{vagasFiltradas.length}</span>{" "}
-              {vagasFiltradas.length === 1 ? "oportunidade encontrada" : "oportunidades encontradas"}
+              <span className="text-foreground">{vagasSalvas.length}</span>{" "}
+              {vagasSalvas.length === 1 ? "oportunidade encontrada" : "oportunidades encontradas"}
             </p>
             <Button
               variant="outline"
@@ -74,7 +76,7 @@ export function Vagas() {
               Mais recentes
             </Button>
           </div>
-          {vagasFiltradas.length > 0 ? (
+          {vagasFiltradas.length > 0 && vagasFiltradas.some((v) => v.salvo) ? (
             <div className="flex flex-col gap-4">
               {vagasFiltradas.map((vaga) => (
                 <VagaCard

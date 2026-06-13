@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { Bookmark, Bell, LayoutList, LogOut, Menu, X, Newspaper } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import logo from "../../assets/logo.png";
 
 type NavItem = "vagas" | "salvos" | "alertas" | "perfil";
 
 interface SidebarProps {
-  activeItem: NavItem;
-  onNavigate: (item: NavItem) => void;
   alertasCount?: number;
 }
 
@@ -17,12 +16,16 @@ const navItems = [
   { id: "alertas" as NavItem, label: "Alertas", icon: Bell },
 ];
 
-export function Sidebar({ activeItem, onNavigate, alertasCount = 0 }: SidebarProps) {
+export function Sidebar({ alertasCount = 0 }: SidebarProps) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const activeItem = (location.pathname.replace("/", "") || "vagas") as NavItem;
 
   function handleNavigate(item: NavItem) {
-    onNavigate(item);
-    setOpen(false); 
+    navigate(`/${item}`);
+    setOpen(false);
   }
 
   return (
