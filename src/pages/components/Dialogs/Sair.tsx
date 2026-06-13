@@ -1,44 +1,62 @@
-import { DialogHeader, Dialog, DialogClose, DialogContent, DialogFooter, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { SlidersHorizontal } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { loginService } from "@/services/loginServise"
 
 export default function Sair() {
+
+  const handleLogout = () => {
+    loginService.logout();
+    window.location.reload()
+  }
+
+
   return (
     <Dialog>
-      {/* Botão que abre o modal */}
       <DialogTrigger asChild>
-        <Button
-            variant="outline"
-            size="icon"
-            className="h-11 w-11 rounded-xl border-border border-gray-300 bg-white shadow-sm hover:bg-gray-50"
-        >
-            <SlidersHorizontal size={16} className="text-muted-foreground" />
-      </Button>
+        <button className="w-11 h-11 rounded-lg bg-[#fde8e8] flex items-center justify-center text-[#e05252] hover:bg-[#fbd0d0] transition-colors cursor-pointer">
+          <LogOut size={16} />
+        </button>
       </DialogTrigger>
 
-      {/* Conteúdo do modal */}
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Editar Perfil</DialogTitle>
-          <DialogDescription>
-            Faça alterações no seu perfil aqui. Clique em salvar quando terminar.
-          </DialogDescription>
-        </DialogHeader>
-        
-        {/* Aqui você coloca o corpo do modal (formulários, textos, etc.) */}
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <span className="text-right font-medium">Nome</span>
-            <input className="col-span-3 border p-2 rounded" placeholder="Seu Nome" />
-          </div>
+     <DialogContent className="sm:max-w-[380px] bg-white rounded-2xl p-8 flex flex-col items-center text-center gap-5 shadow-xl border-none outline-none">
+        <div className="w-20 h-20 rounded-full bg-[#fde8e8] flex items-center justify-center">
+          <LogOut size={36} className="text-[#cc0000]" />
         </div>
 
-        {/* Rodapé e botão de fechar */}
-        <div className="flex justify-end gap-3">
+        {/* Texto */}
+        <div className="flex flex-col gap-2">
+          <h2 className="text-xl font-bold text-gray-900">
+            Você tem certeza que deseja sair?
+          </h2>
+          <p className="text-sm text-gray-400 leading-relaxed">
+            Após essa ação você só consiguirá acessar sua conta novamente ao logar.
+          </p>
+        </div>
+
+        {/* Botões */}
+        <div className="flex gap-3 w-full mt-1">
           <DialogClose asChild>
-            <Button variant="ghost">Cancelar</Button>
+            <Button
+              variant="secondary"
+              className="flex-1 h-12 rounded-xl bg-gray-400 hover:bg-gray-500 text-white font-semibold text-base"
+            >
+              Voltar
+            </Button>
           </DialogClose>
-          <Button type="submit">Salvar alterações</Button>
+
+          <Button
+            className="flex-1 h-12 rounded-xl bg-[#cc0000] hover:bg-[#aa0000] text-white font-semibold text-base gap-2"
+            onClick={handleLogout}
+          >
+            <LogOut size={16} />
+            Sair
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

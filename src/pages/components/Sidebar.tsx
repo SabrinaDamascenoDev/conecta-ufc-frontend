@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { Bookmark, Bell, LayoutList, LogOut, Menu, X } from "lucide-react";
+import { Bookmark, Bell, LayoutList, LogOut, Menu, X, Newspaper } from "lucide-react";
 import { cn } from "@/lib/utils";
 import logo from "../../assets/logo.png";
 
-type NavItem = "vagas" | "salvos" | "alertas";
+type NavItem = "vagas" | "salvos" | "alertas" | "perfil";
 
 interface SidebarProps {
   activeItem: NavItem;
@@ -12,7 +12,7 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { id: "vagas" as NavItem, label: "Vagas", icon: LayoutList },
+  { id: "vagas" as NavItem, label: "Vagas", icon: Newspaper },
   { id: "salvos" as NavItem, label: "Salvos", icon: Bookmark },
   { id: "alertas" as NavItem, label: "Alertas", icon: Bell },
 ];
@@ -22,12 +22,11 @@ export function Sidebar({ activeItem, onNavigate, alertasCount = 0 }: SidebarPro
 
   function handleNavigate(item: NavItem) {
     onNavigate(item);
-    setOpen(false); // fecha ao navegar no mobile
+    setOpen(false); 
   }
 
   return (
     <>
-      {/* Botão hambúrguer — só aparece em mobile */}
       <button
         onClick={() => setOpen(true)}
         className="
@@ -44,7 +43,6 @@ export function Sidebar({ activeItem, onNavigate, alertasCount = 0 }: SidebarPro
         <Menu size={20} />
       </button>
 
-      {/* Overlay — só no mobile quando aberto */}
       {open && (
         <div
           className="fixed inset-0 z-40 bg-black/40 lg:hidden"
@@ -52,21 +50,16 @@ export function Sidebar({ activeItem, onNavigate, alertasCount = 0 }: SidebarPro
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
-          // base
           "fixed top-4 left-4 w-[240px] h-[calc(100vh-32px)] rounded-[40px]",
           "bg-gradient-to-br from-[#0066CC] to-[#00488C]",
           "flex flex-col text-white select-none shadow-lg",
           "transition-transform duration-300 ease-in-out z-50",
-          // desktop: sempre visível
           "lg:translate-x-0",
-          // mobile: escondida por padrão, abre ao clicar
           open ? "translate-x-0" : "-translate-x-[110%] lg:translate-x-0"
         )}
       >
-        {/* Botão fechar — só no mobile */}
         <button
           onClick={() => setOpen(false)}
           className="lg:hidden absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
@@ -85,15 +78,15 @@ export function Sidebar({ activeItem, onNavigate, alertasCount = 0 }: SidebarPro
 
         <div className="mx-6 h-px bg-white/20 mb-4" />
 
-        <nav className="flex flex-col gap-1 px-3 flex-1">
+        <nav className="flex flex-col gap-1 flex-1">
           {navItems.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => handleNavigate(id)}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 text-left w-full",
+                "flex items-center gap-3 px-7 py-3 border-l-4 border-transparent text-sm font-medium transition-all duration-150 text-left w-full",
                 activeItem === id
-                  ? "bg-white/20 text-white"
+                  ? "bg-white/20 text-white border-l-white"
                   : "text-white/70 hover:bg-white/10 hover:text-white"
               )}
             >

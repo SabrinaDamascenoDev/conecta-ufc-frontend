@@ -8,3 +8,7 @@
 @theme {
   --color-ufc: #00488C;
 }
+
+[role="dialog"] {
+  border: none !important;
+}

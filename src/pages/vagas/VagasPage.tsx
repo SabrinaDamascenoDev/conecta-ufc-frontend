@@ -1,31 +1,27 @@
 import { useState, useMemo } from "react";
-import { ArrowUpDown, LogOutIcon } from "lucide-react";
+import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sidebar } from "../components/Sidebar";
 import { SearchBar } from "../components/Search";
 import { ProgramaFilter } from "../components/Filter";
 import { VagaCard } from "../components/VagaCard";
 import { vagas as vagasInitial, type Vaga, type Programa } from "@/mocks/mocksvagas";
+import Sair from "../components/Dialogs/Sair";
 
 type FilterOption = "Todas" | Programa;
+type NavItem = "vagas" | "salvos" | "alertas" | "perfil";
 
 export function Vagas() {
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<FilterOption>("Todas");
   const [vagas, setVagas] = useState<Vaga[]>(vagasInitial);
-  const [activeNav, setActiveNav] = useState<"vagas" | "salvos" | "alertas">("vagas");
+  const [activeNav, setActiveNav] = useState<NavItem>("vagas");
 
   const vagasFiltradas = useMemo(() => {
     let result = vagas;
-
-    if (activeNav === "salvos") {
-      result = result.filter((v) => v.salvo);
-    }
-
     if (filtro !== "Todas") {
       result = result.filter((v) => v.programa === filtro);
     }
-
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -36,9 +32,8 @@ export function Vagas() {
           v.tags.some((t) => t.toLowerCase().includes(q))
       );
     }
-
     return result;
-  }, [vagas, filtro, search, activeNav]);
+  }, [vagas, filtro, search]);
 
   function handleSave(id: number) {
     setVagas((prev) =>
@@ -50,7 +45,40 @@ export function Vagas() {
     alert(`Abrindo detalhes da vaga #${id}`);
   }
 
-  const pageTitle = activeNav === "salvos" ? "Salvos" : activeNav === "alertas" ? "Alertas" : "Vagas";
+  // Telas em construção
+  if (activeNav === "salvos" || activeNav === "alertas" || activeNav === "perfil") {
+    const labels: Record<string, string> = {
+      salvos: "Salvos",
+      alertas: "Alertas",
+      perfil: "Perfil",
+    };
+    return (
+      <div className="flex min-h-screen bg-[#f4f6f9] font-sans">
+        <Sidebar
+          activeItem={activeNav}
+          onNavigate={setActiveNav}
+          alertasCount={10}
+        />
+        <main className="flex flex-col flex-1 min-w-0 lg:pl-[262px]">
+          <div className="flex items-center justify-between px-8 pt-7 pb-0 gap-4">
+            <div className="pl-10 lg:pl-0 flex-1">
+              <SearchBar value={search} onChange={setSearch} />
+            </div>
+            <div className="flex items-center gap-2 ml-auto">
+              <div className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center justify-center text-xs font-bold text-white">
+                SD
+              </div>
+              <Sair />
+            </div>
+          </div>
+          <div className="flex flex-col items-center justify-center flex-1 py-32 text-gray-400">
+            <p className="text-lg font-semibold text-gray-500">{labels[activeNav]}</p>
+            <p className="text-sm mt-1">Em breve 🚧</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-[#f4f6f9] font-sans">
@@ -59,45 +87,34 @@ export function Vagas() {
         onNavigate={setActiveNav}
         alertasCount={10}
       />
-
       <main className="flex flex-col flex-1 min-w-0 lg:pl-[262px]">
         <div className="flex items-center justify-between px-8 pt-7 pb-0 gap-4">
           <div className="pl-10 lg:pl-0 flex-1">
             <SearchBar value={search} onChange={setSearch} />
           </div>
-          
           <div className="flex items-center gap-2 ml-auto">
-            <div className="w-9 h-9 rounded-full bg-[#5b8de8] flex items-center justify-center text-xs font-bold text-white">
+            <div className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center justify-center text-xs font-bold text-white">
               SD
             </div>
-            <button className="w-9 h-9 rounded-full bg-[#fde8e8] flex items-center justify-center text-[#e05252] hover:bg-[#fbd0d0] transition-colors">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                <LogOutIcon />
-              </svg>
-            </button>
+            <Sair />
           </div>
         </div>
-
         <div className="px-8 pt-6 pb-10 flex flex-col gap-5">
-          {activeNav === "vagas" && (
-            <ProgramaFilter selected={filtro} onChange={setFiltro} />
-          )}
-
+          <ProgramaFilter selected={filtro} onChange={setFiltro} />
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
-              <span className="font-semibold text-gray-800">{vagasFiltradas.length}</span>{" "}
+              <span className="text-foreground">{vagasFiltradas.length}</span>{" "}
               {vagasFiltradas.length === 1 ? "oportunidade encontrada" : "oportunidades encontradas"}
             </p>
             <Button
               variant="outline"
               size="sm"
-              className="gap-1.5 text-xs text-gray-600 border-gray-300 bg-white rounded-xl hover:bg-gray-50"
+              className="gap-1.5 text-xs text-gray-600 border-gray-200 py-4 px-3 bg-white rounded-xl hover:bg-gray-50"
             >
               <ArrowUpDown size={13} />
               Mais recentes
             </Button>
           </div>
-
           {vagasFiltradas.length > 0 ? (
             <div className="flex flex-col gap-4">
               {vagasFiltradas.map((vaga) => (

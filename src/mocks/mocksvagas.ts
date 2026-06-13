@@ -47,7 +47,7 @@ export const vagas: Vaga[] = [
     valor: "700 R$",
     tags: ["PIBIC", "Todos os cursos"],
     encerraEm: 7,
-    salvo: true,
+    salvo: false,
   },
   {
     id: 3,
