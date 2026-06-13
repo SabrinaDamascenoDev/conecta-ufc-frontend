@@ -7,6 +7,7 @@ import { ProgramaFilter } from "../components/Filter";
 import { VagaCard } from "../components/VagaCard";
 import { vagas as vagasInitial, type Vaga, type Programa } from "@/mocks/mocksvagas";
 import Sair from "../components/Dialogs/Sair";
+import type { AdvancedFilters } from "../components/FilterSheet";
 
 type FilterOption = "Todas" | Programa;
 
@@ -51,7 +52,9 @@ export function Salvos() {
       <main className="flex flex-col flex-1 min-w-0 lg:pl-[262px]">
         <div className="flex items-center justify-between px-8 pt-7 pb-0 gap-4">
           <div className="pl-10 lg:pl-0 flex-1">
-            <SearchBar value={search} onChange={setSearch} />
+            <SearchBar value={search} onChange={setSearch} onApplyFilters={function (filters: AdvancedFilters): void {
+                          throw new Error("Function not implemented.");
+                      } } />
           </div>
           <div className="flex items-center gap-2 ml-auto">
             <div className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center justify-center text-xs font-bold text-white">

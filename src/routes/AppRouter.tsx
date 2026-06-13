@@ -5,6 +5,7 @@ import RegisterPage from "@/pages/auth/Register/RegisterPage";
 import { PrivateRoute } from "./PrivateRoute";
 import { Vagas } from "@/pages/vagas/VagasPage";
 import { Salvos } from "@/pages/salvos/Salvos";
+import { Alertas } from "@/pages/alertas/Alertas";
 
 export default function AppRouter() {
   return (
@@ -16,6 +17,7 @@ export default function AppRouter() {
         <Route element={<PrivateRoute />}>
           <Route  path="vagas" element={<Vagas />}></Route>
           <Route path='salvos' element={<Salvos />} />
+          <Route path='alertas' element={<Alertas />} />
         </Route>
       </Routes>
     </BrowserRouter>

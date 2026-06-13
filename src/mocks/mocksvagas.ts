@@ -18,7 +18,7 @@ export interface Vaga {
   coordenador: string;
   valor: string;
   tags: string[];
-  encerraEm: number; // dias
+  encerraEm: number;
   salvo: boolean;
 }
 
