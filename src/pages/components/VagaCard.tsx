@@ -12,10 +12,10 @@ interface VagaCardProps {
 
 function ProgramaIcon({ programa }: { programa: Vaga["programa"] }) {
   const base = "w-14 h-14 rounded-xl flex items-center justify-center bg-[#dce8f7]";
-  if (programa === "PID") return <div className={base}><GraduationCap size={25} className="text-[#1a4fa0]" /></div>;
-  if (programa === "PIBIC") return <div className={base}><FlaskConical size={25} className="text-[#1a4fa0]" /></div>;
-  if (programa === "P&D") return <div className={base}><MicroscopeIcon size={25} className="text-[#1a4fa0]" /></div>;
-  return <div className={base}><Monitor size={25} className="text-[#1a4fa0]" /></div>;
+  if (programa === "PID") return <div className={base}><GraduationCap size={25} className="text-[#00488C]" /></div>;
+  if (programa === "PIBIC") return <div className={base}><FlaskConical size={25} className="text-[#00488C]" /></div>;
+  if (programa === "P&D") return <div className={base}><MicroscopeIcon size={25} className="text-[#00488C]" /></div>;
+  return <div className={base}><Monitor size={25} className="text-[#00488C]" /></div>;
 }
 
 function encerraColor(dias: number) {
@@ -40,7 +40,7 @@ export function VagaCard({ vaga, onSave, onSaberMais }: VagaCardProps) {
         </div>
         <Button
           size="sm"
-          className="shrink-0 bg-[#1a4fa0] hover:bg-[#153f85] text-white rounded-lg gap-2 text-sm font-semibold px-4 py-4 cursor-pointer"
+          className="shrink-0 bg-[#00488C] hover:bg-[#153f85] text-white rounded-lg gap-2 text-sm font-semibold px-4 py-4 cursor-pointer"
           onClick={() => onSaberMais(vaga.id)}
         >
           <Info size={14} />
@@ -61,7 +61,7 @@ export function VagaCard({ vaga, onSave, onSaberMais }: VagaCardProps) {
           {vaga.tags.map((tag) => (
             <Badge
               key={tag}
-              className="bg-[#1a4fa0] hover:bg-[#1a4fa0] text-white text-xs font-medium px-3 py-3 rounded-full"
+              className="bg-[#00488C] hover:bg-[#00488C] text-white text-xs font-medium px-3 py-3 rounded-full"
             >
               {tag}
             </Badge>

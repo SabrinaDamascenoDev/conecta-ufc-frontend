@@ -5,9 +5,14 @@ import { Sidebar } from "../components/Sidebar";
 import { SearchBar } from "../components/Search";
 import { ProgramaFilter } from "../components/Filter";
 import { VagaCard } from "../components/VagaCard";
-import { vagas as vagasInitial, type Vaga, type Programa } from "@/mocks/mocksvagas";
+import {
+  vagas as vagasInitial,
+  type Vaga,
+  type Programa,
+} from "@/mocks/mocksvagas";
 import Sair from "../components/Dialogs/Sair";
 import type { AdvancedFilters } from "../components/FilterSheet";
+import notFound from "@/assets/not-found.svg";
 
 type FilterOption = "Todas" | Programa;
 
@@ -28,7 +33,7 @@ export function Alertas() {
           v.titulo.toLowerCase().includes(q) ||
           v.descricao.toLowerCase().includes(q) ||
           v.coordenador.toLowerCase().includes(q) ||
-          v.tags.some((t) => t.toLowerCase().includes(q))
+          v.tags.some((t) => t.toLowerCase().includes(q)),
       );
     }
     return result;
@@ -36,7 +41,7 @@ export function Alertas() {
 
   function handleSave(id: number) {
     setVagas((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v))
+      prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v)),
     );
   }
 
@@ -44,16 +49,19 @@ export function Alertas() {
     alert(`Abrindo detalhes da vaga #${id}`);
   }
 
-  
   return (
     <div className="flex min-h-screen bg-white font-sans">
       <Sidebar alertasCount={10} />
       <main className="flex flex-col flex-1 min-w-0 lg:pl-[262px]">
         <div className="flex items-center justify-between px-8 pt-7 pb-0 gap-4">
           <div className="pl-10 lg:pl-0 flex-1">
-            <SearchBar value={search} onChange={setSearch} onApplyFilters={function (filters: AdvancedFilters): void {
-                          throw new Error("Function not implemented.");
-                      } } />
+            <SearchBar
+              value={search}
+              onChange={setSearch}
+              onApplyFilters={function (filters: AdvancedFilters): void {
+                throw new Error("Function not implemented.");
+              }}
+            />
           </div>
           <div className="flex items-center gap-2 ml-auto">
             <div className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center justify-center text-xs font-bold text-white">
@@ -67,7 +75,9 @@ export function Alertas() {
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
               <span className="text-foreground">{vagasFiltradas.length}</span>{" "}
-              {vagasFiltradas.length === 1 ? "oportunidade encontrada" : "oportunidades encontradas"}
+              {vagasFiltradas.length === 1
+                ? "oportunidade encontrada"
+                : "oportunidades encontradas"}
             </p>
             <Button
               variant="outline"
@@ -90,13 +100,24 @@ export function Alertas() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-              <p className="text-base font-medium">Nenhuma vaga encontrada</p>
-              <p className="text-sm mt-1">Tente ajustar os filtros ou a busca</p>
+            <div className="flex flex-col items-center justify-center h-full py-20 text-center">
+              <img
+                src={notFound}
+                alt="Nenhuma vaga encontrada"
+                className="w-80 md:w-96 mb-8 opacity-80"
+              />
+
+              <p className="text-2xl font-bold text-black">
+                Nenhuma vaga encontrada
+              </p>
+
+              <p className="text-base mt-2 text-gray-500">
+                Tente ajustar os filtros ou a busca
+              </p>
             </div>
           )}
         </div>
       </main>
     </div>
   );
-  }
+}

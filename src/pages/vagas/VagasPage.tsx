@@ -10,12 +10,12 @@ import {
 } from "@/mocks/mocksvagas";
 import Sair from "../components/Dialogs/Sair";
 import { SortDropdown } from "../components/SortDropdown";
-import { FilterSheet, type AdvancedFilters } from "../components/FilterSheet";
+import { type AdvancedFilters } from "../components/FilterSheet";
+import notFound from "@/assets/not-found.svg";
 
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
 
-// Extrai o número de um valor como "700 R$" → 700
 function parseValor(valor: string): number {
   return parseInt(valor.replace(/\D/g, ""), 10) || 0;
 }
@@ -57,12 +57,10 @@ export function Vagas() {
   const vagasFiltradas = useMemo(() => {
     let result = vagas;
 
-    // Filtro de programa (pill bar)
     if (filtro !== "Todas") {
       result = result.filter((v) => v.programa === filtro);
     }
 
-    // Busca por texto
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -74,37 +72,32 @@ export function Vagas() {
       );
     }
 
-    // Filtro avançado: programa (sheet)
     if (advancedFilters.programas.length > 0) {
       result = result.filter((v) =>
         advancedFilters.programas.includes(v.programa),
       );
     }
 
-    // Filtro avançado: tags / área
     if (advancedFilters.tags.length > 0) {
       result = result.filter((v) =>
         advancedFilters.tags.some((tag) => v.tags.includes(tag)),
       );
     }
 
-    // Filtro avançado: valor da bolsa
     if (advancedFilters.valor.length > 0) {
       result = result.filter((v) => matchValor(v.valor, advancedFilters.valor));
     }
 
-    // Filtro avançado: prazo (encerraEm em dias)
     if (advancedFilters.prazo.length > 0) {
       result = result.filter((v) =>
         matchPrazo(v.encerraEm, advancedFilters.prazo),
       );
     }
 
-    // Ordenação
     result = [...result].sort((a, b) => {
       switch (sort) {
         case "recentes":
-          return a.encerraEm - b.encerraEm; // quem encerra mais cedo aparece primeiro
+          return a.encerraEm - b.encerraEm;
         case "antigas":
           return b.encerraEm - a.encerraEm;
         case "az":
@@ -178,9 +171,18 @@ export function Vagas() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-              <p className="text-base font-medium">Nenhuma vaga encontrada</p>
-              <p className="text-sm mt-1">
+            <div className="flex flex-col items-center justify-center h-full py-20 text-center">
+              <img
+                src={notFound}
+                alt="Nenhuma vaga encontrada"
+                className="w-80 md:w-96 mb-8 opacity-80"
+              />
+
+              <p className="text-2xl font-bold text-black">
+                Nenhuma vaga encontrada
+              </p>
+
+              <p className="text-base mt-2 text-gray-500">
                 Tente ajustar os filtros ou a busca
               </p>
             </div>
