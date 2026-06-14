@@ -136,15 +136,13 @@ export function Salvos() {
               onApplyFilters={setAdvancedFilters}
             />
           </div>
-          <button
-            className="flex items-center gap-2 ml-auto cursor-pointer"
-            onClick={() => navigate("/perfil")}
-          >
-            <div className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center justify-center text-xs font-bold text-white">
+          <div
+            className="flex items-center gap-2 ml-auto">
+            <button className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center cursor-pointer justify-center text-xs font-bold text-white" onClick={() => navigate("/perfil")}>
               SD
-            </div>
+            </button>
             <Sair />
-          </button>
+          </div>
         </div>
         <div className="px-8 pt-6 pb-10 flex flex-col gap-5">
           <ProgramaFilter selected={filtro} onChange={setFiltro} />
