@@ -17,6 +17,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { StepIndicator } from "../components/StepIndicator";
 import { registerUser } from "@/services/authService";
 import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 const OPPORTUNITY_TAGS = [
   "PAID",
@@ -33,6 +34,8 @@ export default function RegisterPage() {
   const [step, setStep] = useState<1 | 2>(1);
   const [showPassword, setShowPassword] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
   const navigate = useNavigate();
   const [formData, setFormData] = useState<RegisterSchemaData | null>(null);
 
@@ -59,11 +62,12 @@ export default function RegisterPage() {
 
   function onSubmit(data: RegisterSchemaData) {
     setFormData(data);
-    console.log(data);
     setStep(2);
   }
   async function finalizarCadastro() {
     if (!formData) return;
+    setIsLoading(true)
+    setServerError(null)
 
     try {
       await registerUser({
@@ -74,15 +78,18 @@ export default function RegisterPage() {
       toast.success("Cadastro realizado com sucesso!");
 
       navigate("/vagas");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Erro ao realizar cadastro",
-      );
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Erro ao conectar com o servidor.";
+
+      toast.error(message);
+      setIsLoading(false)
     }
   }
 
   return (
     <div className="flex min-h-screen">
+      <Toaster richColors position="top-right" />
       <LeftPanel />
 
       <div className="flex-1 flex items-center justify-center p-3 bg-white">
@@ -263,7 +270,7 @@ export default function RegisterPage() {
                 className="w-full bg-ufc text-white font-medium py-4 rounded-xl transition-colors mt-4"
                 onClick={finalizarCadastro}
               >
-                Acessar a plataforma
+                {isLoading ? "Acessando..." : "Acessar a plataforma"}
               </button>
             </div>
           )}
