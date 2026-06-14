@@ -14,6 +14,7 @@ import Sair from "../components/Dialogs/Sair";
 import type { AdvancedFilters } from "../components/FilterSheet";
 import notFound from "@/assets/not-found.svg";
 import { SortDropdown } from "../components/SortDropdown";
+import { useNavigate } from "react-router-dom";
 
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
@@ -49,13 +50,14 @@ export function Salvos() {
   const [filtro, setFiltro] = useState<FilterOption>("Todas");
   const [sort, setSort] = useState<SortValue>("recentes");
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
-      programas: [],
-      tags: [],
-      valor: [],
-      prazo: [],
-    });
+    programas: [],
+    tags: [],
+    valor: [],
+    prazo: [],
+  });
   const [vagas, setVagas] = useState<Vaga[]>(vagasInitial);
   const vagasSalvas = useMemo(() => vagas.filter((v) => v.salvo), [vagas]);
+  const navigate = useNavigate();
 
   const vagasFiltradas = useMemo(() => {
     let result = vagas;
@@ -134,10 +136,11 @@ export function Salvos() {
               onApplyFilters={setAdvancedFilters}
             />
           </div>
-          <div className="flex items-center gap-2 ml-auto">
-            <div className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center justify-center text-xs font-bold text-white">
+          <div
+            className="flex items-center gap-2 ml-auto">
+            <button className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center cursor-pointer justify-center text-xs font-bold text-white" onClick={() => navigate("/perfil")}>
               SD
-            </div>
+            </button>
             <Sair />
           </div>
         </div>
@@ -150,7 +153,10 @@ export function Salvos() {
                 ? "oportunidade encontrada"
                 : "oportunidades encontradas"}
             </p>
-            <SortDropdown value={sort} onChange={(v) => setSort(v as SortValue)} />
+            <SortDropdown
+              value={sort}
+              onChange={(v) => setSort(v as SortValue)}
+            />
           </div>
           {vagasFiltradas.length > 0 && vagasFiltradas.some((v) => v.salvo) ? (
             <div className="flex flex-col gap-4">

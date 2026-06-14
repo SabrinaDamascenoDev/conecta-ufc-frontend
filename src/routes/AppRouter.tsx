@@ -6,6 +6,7 @@ import { PrivateRoute } from "./PrivateRoute";
 import { Vagas } from "@/pages/vagas/VagasPage";
 import { Salvos } from "@/pages/salvos/Salvos";
 import { Alertas } from "@/pages/alertas/Alertas";
+import { Perfil } from "@/pages/perfil/Perfil";
 
 export default function AppRouter() {
   return (
@@ -18,6 +19,7 @@ export default function AppRouter() {
           <Route  path="vagas" element={<Vagas />}></Route>
           <Route path='salvos' element={<Salvos />} />
           <Route path='alertas' element={<Alertas />} />
+          <Route path="perfil" element={<Perfil />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -104,9 +104,9 @@ export function Sidebar({ alertasCount = 0 }: SidebarProps) {
           ))}
         </nav>
 
-        <div className="px-4 pb-6">
+        <div className="px-3 pb-6">
           <div className="mx-0 h-px bg-white/20 mb-4" />
-          <div className="flex items-center gap-3">
+          <button className="flex items-center gap-3 cursor-pointer px-3 py-2 rounded-lg hover:bg-white/10 transition-colors" onClick={() => navigate('/perfil')}>
             <div className="w-8 h-8 rounded-full bg-[#5b8de8] flex items-center justify-center text-xs font-bold text-white shrink-0">
               SD
             </div>
@@ -114,10 +114,7 @@ export function Sidebar({ alertasCount = 0 }: SidebarProps) {
               <p className="text-sm font-semibold text-white truncate">Sabrina Damasceno</p>
               <p className="text-xs text-white/60 truncate">Sistemas de informação</p>
             </div>
-            <button className="text-white/50 hover:text-white transition-colors">
-              <LogOut size={15} />
-            </button>
-          </div>
+          </button>
         </div>
       </aside>
     </>
