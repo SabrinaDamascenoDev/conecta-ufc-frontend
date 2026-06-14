@@ -12,6 +12,7 @@ import Sair from "../components/Dialogs/Sair";
 import { SortDropdown } from "../components/SortDropdown";
 import { type AdvancedFilters } from "../components/FilterSheet";
 import notFound from "@/assets/not-found.svg";
+import { useNavigate } from "react-router-dom";
 
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
@@ -53,6 +54,7 @@ export function Vagas() {
     prazo: [],
   });
   const [vagas, setVagas] = useState<Vaga[]>(vagasInitial);
+  const navigate = useNavigate();
 
   const vagasFiltradas = useMemo(() => {
     let result = vagas;
@@ -135,12 +137,12 @@ export function Vagas() {
               onApplyFilters={setAdvancedFilters}
             />
           </div>
-          <div className="flex items-center gap-2 ml-auto">
+          <button className="flex items-center gap-2 ml-auto cursor-pointer" onClick={() => navigate('/perfil')}>
             <div className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center justify-center text-xs font-bold text-white">
               SD
             </div>
             <Sair />
-          </div>
+          </button>
         </div>
 
         <div className="px-8 pt-6 pb-10 flex flex-col gap-5">

@@ -12,6 +12,7 @@ import Sair from "../components/Dialogs/Sair";
 import type { AdvancedFilters } from "../components/FilterSheet";
 import notFound from "@/assets/not-found.svg";
 import { SortDropdown } from "../components/SortDropdown";
+import { useNavigate } from "react-router-dom";
 
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
@@ -46,13 +47,14 @@ export function Alertas() {
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<FilterOption>("Todas");
   const [sort, setSort] = useState<SortValue>("recentes");
-    const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
-        programas: [],
-        tags: [],
-        valor: [],
-        prazo: [],
-      });
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
+    programas: [],
+    tags: [],
+    valor: [],
+    prazo: [],
+  });
   const [vagas, setVagas] = useState<Vaga[]>(vagasInitial);
+  const navigate = useNavigate()
 
   const vagasFiltradas = useMemo(() => {
     let result = vagas;
@@ -69,7 +71,7 @@ export function Alertas() {
           v.tags.some((t) => t.toLowerCase().includes(q)),
       );
     }
-     if (advancedFilters.programas.length > 0) {
+    if (advancedFilters.programas.length > 0) {
       result = result.filter((v) =>
         advancedFilters.programas.includes(v.programa),
       );
@@ -131,12 +133,15 @@ export function Alertas() {
               onApplyFilters={setAdvancedFilters}
             />
           </div>
-          <div className="flex items-center gap-2 ml-auto">
+          <button
+            className="flex items-center gap-2 ml-auto cursor-pointer"
+            onClick={() => navigate("/perfil")}
+          >
             <div className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center justify-center text-xs font-bold text-white">
               SD
             </div>
             <Sair />
-          </div>
+          </button>
         </div>
         <div className="px-8 pt-6 pb-10 flex flex-col gap-5">
           <ProgramaFilter selected={filtro} onChange={setFiltro} />
@@ -147,7 +152,10 @@ export function Alertas() {
                 ? "oportunidade encontrada"
                 : "oportunidades encontradas"}
             </p>
-            <SortDropdown value={sort} onChange={(v) => setSort(v as SortValue)} />
+            <SortDropdown
+              value={sort}
+              onChange={(v) => setSort(v as SortValue)}
+            />
           </div>
           {vagasFiltradas.length > 0 ? (
             <div className="flex flex-col gap-4">
