@@ -19,7 +19,7 @@ export default function Sair() {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <button className="w-11 h-11 rounded-lg bg-[#fde8e8] flex items-center justify-center text-[#e05252] hover:bg-[#fbd0d0] transition-colors cursor-pointer">
+        <button className="w-11 h-11 rounded-xl bg-[#fde8e8] flex items-center justify-center text-[#e05252] hover:bg-[#fbd0d0] transition-colors cursor-pointer">
           <LogOut size={16} />
         </button>
       </DialogTrigger>
