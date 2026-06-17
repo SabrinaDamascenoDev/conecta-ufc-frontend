@@ -121,7 +121,7 @@ export function Vagas() {
   }
 
   function handleSaberMais(id: number) {
-    alert(`Abrindo detalhes da vaga #${id}`);
+    navigate(`/vaga/${id}`)
   }
 
   return (

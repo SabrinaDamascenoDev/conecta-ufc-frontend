@@ -19,15 +19,14 @@ function ProgramaIcon({ programa }: { programa: Vaga["programa"] }) {
 }
 
 function encerraColor(dias: number) {
-  if (dias <= 5) return "text-amber-500";
+  if (dias <= 5) return "text-[#FF1519]";
   if (dias <= 10) return "text-orange-400";
   return "text-green-600";
 }
 
 export function VagaCard({ vaga, onSave, onSaberMais }: VagaCardProps) {
   return (
-    <div className="bg-[#F2F2F2] rounded-2xl px-6 py-5">
-      {/* Header */}
+    <div className="bg-[#F2F2F2] rounded-2xl px-6 py-5 font-sans">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <ProgramaIcon programa={vaga.programa} />
@@ -48,14 +47,12 @@ export function VagaCard({ vaga, onSave, onSaberMais }: VagaCardProps) {
         </Button>
       </div>
 
-      {/* Body */}
       <div className="mt-4 text-sm text-gray-700 leading-relaxed space-y-0.5">
         <p>{vaga.descricao}</p>
         <p>Coodernador responsável: {vaga.coordenador}.</p>
         <p>Valor: {vaga.valor}</p>
       </div>
 
-      {/* Footer */}
       <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           {vaga.tags.map((tag) => (
