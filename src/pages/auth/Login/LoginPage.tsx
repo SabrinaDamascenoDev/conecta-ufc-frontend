@@ -9,6 +9,7 @@ import { NavagateBar } from "../components/NavegateBar";
 import { loginService } from "../../../services/loginServise";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import EsqueceuSenha from "../components/Dialog/EsqueciSenha";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -127,12 +128,7 @@ export default function LoginPage() {
               )}
 
               <div className="text-right mt-2">
-                <button
-                  type="button"
-                  className="text-xs text-blue-600 hover:underline"
-                >
-                  Esqueci minha senha
-                </button>
+                <EsqueceuSenha />
               </div>
             </div>
 

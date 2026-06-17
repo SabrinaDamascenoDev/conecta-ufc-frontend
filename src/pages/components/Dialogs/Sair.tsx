@@ -42,12 +42,13 @@ export default function Sair() {
         {/* Botões */}
         <div className="flex gap-3 w-full mt-1">
           <DialogClose asChild>
-            <Button
-              variant="secondary"
-              className="flex-1 h-12 rounded-xl bg-gray-400 hover:bg-gray-500 text-white font-semibold text-base cursor-pointer"
-            >
-              Voltar
-            </Button>
+             <Button
+                    type="button"
+                    variant="secondary"
+                    className="flex-1 h-12 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-base cursor-pointer"
+                  >
+                    Voltar
+                  </Button>
           </DialogClose>
 
           <Button
