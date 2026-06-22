@@ -10,7 +10,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const programas = [
-  "PAID",
+  "PAIP",
   "PID",
   "PIBIC",
   "P&D",
@@ -41,7 +41,7 @@ export function EditarPerfil({ children }: EditarPerfilProps) {
   const [editandoEmail, setEditandoEmail] = useState(false);
   const [showCursos, setShowCursos] = useState(false);
   const [alertasSelecionados, setAlertasSelecionados] = useState<string[]>([
-    "PAID",
+    "PAIP",
     "PID",
     "PIBIC",
   ]);

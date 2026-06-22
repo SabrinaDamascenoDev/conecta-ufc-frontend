@@ -1,5 +1,5 @@
 export type Programa =
-  | "PAID"
+  | "PAIP"
   | "PID"
   | "PIBIC"
   | "P&D"
@@ -91,14 +91,14 @@ export const vagas: Vaga[] = [
   },
   {
     id: 4,
-    titulo: "PAID - Apoio ao Discente",
-    programa: "PAID",
+    titulo: "PAIP - Apoio ao Discente",
+    programa: "PAIP",
     publicadoHa: "5 dias",
     ate: "20/05/2026",
     descricao: "Seleção de bolsista para auxílio em laboratórios de informática.",
     coordenador: "Carla Mendes",
     valor: "500 R$",
-    tags: ["PAID", "SI", "CC"],
+    tags: ["PAIP", "SI", "CC"],
     encerraEm: 15,
     salvo: false,
     vagasVoluntarias: 2,

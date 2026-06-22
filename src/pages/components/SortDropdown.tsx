@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { ArrowUpDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,9 +14,9 @@ export type SortOption = {
 
 const SORT_OPTIONS: SortOption[] = [
   { label: "Mais recentes", value: "recentes" },
-  { label: "Mais antigas", value: "antigas" },
-  { label: "A–Z", value: "az" },
-  { label: "Z–A", value: "za" },
+  { label: "Mais antigas",  value: "antigas"  },
+  { label: "A–Z",           value: "az"       },
+  { label: "Z–A",           value: "za"       },
 ];
 
 interface SortDropdownProps {
@@ -26,14 +25,7 @@ interface SortDropdownProps {
 }
 
 export function SortDropdown({ value = "recentes", onChange }: SortDropdownProps) {
-  const [selected, setSelected] = useState(value);
-
-  const current = SORT_OPTIONS.find((o) => o.value === selected);
-
-  function handleSelect(opt: SortOption) {
-    setSelected(opt.value);
-    onChange?.(opt.value);
-  }
+  const current = SORT_OPTIONS.find((o) => o.value === value);
 
   return (
     <DropdownMenu>
@@ -52,11 +44,11 @@ export function SortDropdown({ value = "recentes", onChange }: SortDropdownProps
         {SORT_OPTIONS.map((opt) => (
           <DropdownMenuItem
             key={opt.value}
-            onSelect={() => handleSelect(opt)}
+            onSelect={() => onChange?.(opt.value)}
             className="flex items-center justify-between gap-2 text-sm rounded-lg px-3 py-2 cursor-pointer text-gray-700 hover:bg-gray-50 focus:bg-gray-50"
           >
             {opt.label}
-            {selected === opt.value && (
+            {value === opt.value && (
               <Check size={13} className="text-[#1a4fa0]" />
             )}
           </DropdownMenuItem>

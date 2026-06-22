@@ -12,9 +12,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import type { Programa } from "@/mocks/mocksvagas";
+import { type Programa } from "@/hooks/useOportunidades";
 
-const PROGRAMAS: Programa[] = ["PAID", "PID", "PIBIC", "P&D", "PET", "PET-SI", "PPCA", "Extenção"];
+const PROGRAMAS: Programa[] = ["PAIP", "PID", "PIBIC", "P&D", "PET", "PET-SI", "PPCA", "Extenção"];
 const TAGS_COMUNS = ["CC", "SI", "EC", "ES", "RC", "IA", "DD", "Todos os cursos"];
 const FAIXAS_VALOR = ["Até R$ 500", "R$ 501–R$ 700", "R$ 701–R$ 900", "Acima de R$ 900"];
 const PRAZO = ["Encerra em até 7 dias", "Encerra em até 15 dias", "Encerra em até 30 dias"];
@@ -106,27 +106,21 @@ export function FilterSheet({ onApply }: FilterSheetProps) {
             selected={draft.programas}
             onToggle={(v) => set("programas", v as Programa)}
           />
-
           <Separator />
-
           <FilterGroup
             title="Área / Curso"
             options={TAGS_COMUNS}
             selected={draft.tags}
             onToggle={(v) => set("tags", v)}
           />
-
           <Separator />
-
           <FilterGroup
             title="Valor da bolsa"
             options={FAIXAS_VALOR}
             selected={draft.valor}
             onToggle={(v) => set("valor", v)}
           />
-
           <Separator />
-
           <FilterGroup
             title="Prazo de inscrição"
             options={PRAZO}

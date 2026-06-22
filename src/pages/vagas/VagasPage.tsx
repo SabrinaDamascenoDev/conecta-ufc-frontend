@@ -3,31 +3,33 @@ import { Sidebar } from "../components/Sidebar";
 import { SearchBar } from "../components/Search";
 import { ProgramaFilter } from "../components/Filter";
 import { VagaCard } from "../components/VagaCard";
-import {
-  vagas as vagasInitial,
-  type Vaga,
-  type Programa,
-} from "@/mocks/mocksvagas";
-import Sair from "../components/Dialogs/Sair";
 import { SortDropdown } from "../components/SortDropdown";
 import { type AdvancedFilters } from "../components/FilterSheet";
+import { useOportunidades, type Programa } from "@/hooks/useOportunidades";
+import Sair from "../components/Dialogs/Sair";
 import notFound from "@/assets/not-found.svg";
 import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
 
 function parseValor(valor: string): number {
-  return parseInt(valor.replace(/\D/g, ""), 10) || 0;
+  // Lida com formato pt-BR: "R$ 1.400,00" → 1400
+  const limpo = valor
+    .replace(/[R$\s]/g, "")   // remove "R$" e espaços
+    .replace(/\./g, "")       // remove separador de milhar
+    .replace(",", ".");        // vírgula decimal → ponto
+  return parseFloat(limpo) || 0;
 }
 
 function matchValor(valor: string, faixas: string[]): boolean {
   if (faixas.length === 0) return true;
   const n = parseValor(valor);
   return faixas.some((f) => {
-    if (f === "Até R$ 500") return n <= 500;
-    if (f === "R$ 501–R$ 700") return n >= 501 && n <= 700;
-    if (f === "R$ 701–R$ 900") return n >= 701 && n <= 900;
+    if (f === "Até R$ 500")      return n <= 500;
+    if (f === "R$ 501–R$ 700")   return n >= 501 && n <= 700;
+    if (f === "R$ 701–R$ 900")   return n >= 701 && n <= 900;
     if (f === "Acima de R$ 900") return n > 900;
     return false;
   });
@@ -35,8 +37,9 @@ function matchValor(valor: string, faixas: string[]): boolean {
 
 function matchPrazo(encerraEm: number, prazos: string[]): boolean {
   if (prazos.length === 0) return true;
+  if (encerraEm === 0) return false; // já encerrou, não exibir
   return prazos.some((p) => {
-    if (p === "Encerra em até 7 dias") return encerraEm <= 7;
+    if (p === "Encerra em até 7 dias")  return encerraEm <= 7;
     if (p === "Encerra em até 15 dias") return encerraEm <= 15;
     if (p === "Encerra em até 30 dias") return encerraEm <= 30;
     return false;
@@ -44,16 +47,17 @@ function matchPrazo(encerraEm: number, prazos: string[]): boolean {
 }
 
 export function Vagas() {
-  const [search, setSearch] = useState("");
-  const [filtro, setFiltro] = useState<FilterOption>("Todas");
-  const [sort, setSort] = useState<SortValue>("recentes");
+  const [search, setSearch]   = useState("");
+  const [filtro, setFiltro]   = useState<FilterOption>("Todas");
+  const [sort, setSort]       = useState<SortValue>("recentes");
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
     programas: [],
     tags: [],
     valor: [],
     prazo: [],
   });
-  const [vagas, setVagas] = useState<Vaga[]>(vagasInitial);
+
+  const { vagas, toggleSalvo, loading, error } = useOportunidades();
   const navigate = useNavigate();
 
   const vagasFiltradas = useMemo(() => {
@@ -70,58 +74,41 @@ export function Vagas() {
           v.titulo.toLowerCase().includes(q) ||
           v.descricao.toLowerCase().includes(q) ||
           v.coordenador.toLowerCase().includes(q) ||
-          v.tags.some((t) => t.toLowerCase().includes(q)),
+          v.tags.some((t) => t.toLowerCase().includes(q))
       );
     }
 
     if (advancedFilters.programas.length > 0) {
-      result = result.filter((v) =>
-        advancedFilters.programas.includes(v.programa),
-      );
+      result = result.filter((v) => advancedFilters.programas.includes(v.programa));
     }
 
     if (advancedFilters.tags.length > 0) {
       result = result.filter((v) =>
-        advancedFilters.tags.some((tag) => v.tags.includes(tag)),
+        advancedFilters.tags.some((tag) => v.tags.includes(tag))
       );
     }
 
     if (advancedFilters.valor.length > 0) {
-      result = result.filter((v) => matchValor(v.valor, advancedFilters.valor));
+      result = result.filter((v) => matchValor(v.remuneracao, advancedFilters.valor));
     }
 
     if (advancedFilters.prazo.length > 0) {
-      result = result.filter((v) =>
-        matchPrazo(v.encerraEm, advancedFilters.prazo),
-      );
+      result = result.filter((v) => matchPrazo(v.encerraEm, advancedFilters.prazo));
     }
 
-    result = [...result].sort((a, b) => {
+    return [...result].sort((a, b) => {
       switch (sort) {
-        case "recentes":
-          return a.encerraEm - b.encerraEm;
-        case "antigas":
-          return b.encerraEm - a.encerraEm;
-        case "az":
-          return a.titulo.localeCompare(b.titulo, "pt-BR");
-        case "za":
-          return b.titulo.localeCompare(a.titulo, "pt-BR");
-        default:
-          return 0;
+        case "recentes": return a.dataCriacao.getTime() - b.dataCriacao.getTime();
+        case "antigas":  return b.dataCriacao.getTime() - a.dataCriacao.getTime();
+        case "az":       return a.titulo.localeCompare(b.titulo, "pt-BR");
+        case "za":       return b.titulo.localeCompare(a.titulo, "pt-BR");
+        default:         return 0;
       }
     });
-
-    return result;
   }, [vagas, filtro, search, sort, advancedFilters]);
 
-  function handleSave(id: number) {
-    setVagas((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v)),
-    );
-  }
-
   function handleSaberMais(id: number) {
-    navigate(`/vaga/${id}`)
+    navigate(`/vaga/${id}`);
   }
 
   return (
@@ -153,40 +140,61 @@ export function Vagas() {
 
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
-              <span className="text-foreground">{vagasFiltradas.length}</span>{" "}
-              {vagasFiltradas.length === 1
-                ? "oportunidade encontrada"
-                : "oportunidades encontradas"}
+              {loading ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 size={13} className="animate-spin" />
+                  Carregando oportunidades…
+                </span>
+              ) : (
+                <>
+                  <span className="text-foreground">{vagasFiltradas.length}</span>{" "}
+                  {vagasFiltradas.length === 1
+                    ? "oportunidade encontrada"
+                    : "oportunidades encontradas"}
+                </>
+              )}
             </p>
-            <SortDropdown
-              value={sort}
-              onChange={(v) => setSort(v as SortValue)}
-            />
+            <SortDropdown value={sort} onChange={(v) => setSort(v as SortValue)} />
           </div>
 
-          {vagasFiltradas.length > 0 ? (
+          {error && !loading && (
+            <div className="rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm px-5 py-4">
+              Não foi possível carregar as oportunidades: <strong>{error}</strong>
+            </div>
+          )}
+
+          {loading && (
+            <div className="flex flex-col gap-4">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-[#F2F2F2] rounded-2xl px-6 py-5 animate-pulse h-36"
+                />
+              ))}
+            </div>
+          )}
+
+          {!loading && !error && vagasFiltradas.length > 0 && (
             <div className="flex flex-col gap-4">
               {vagasFiltradas.map((vaga) => (
                 <VagaCard
                   key={vaga.id}
                   vaga={vaga}
-                  onSave={handleSave}
+                  onSave={toggleSalvo}
                   onSaberMais={handleSaberMais}
                 />
               ))}
             </div>
-          ) : (
+          )}
+
+          {!loading && !error && vagasFiltradas.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full py-20 text-center">
               <img
                 src={notFound}
                 alt="Nenhuma vaga encontrada"
                 className="w-80 md:w-96 mb-8 opacity-80"
               />
-
-              <p className="text-2xl font-bold text-black">
-                Nenhuma vaga encontrada
-              </p>
-
+              <p className="text-2xl font-bold text-black">Nenhuma vaga encontrada</p>
               <p className="text-base mt-2 text-gray-500">
                 Tente ajustar os filtros ou a busca
               </p>

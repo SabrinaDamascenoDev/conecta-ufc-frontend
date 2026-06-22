@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils";
-import { type Programa } from "@/mocks/mocksvagas";
+import { type Programa } from "@/hooks/useOportunidades";
 
 type FilterOption = "Todas" | Programa;
 
 const OPTIONS: FilterOption[] = [
   "Todas",
-  "PAID",
+  "PAIP",
   "PID",
   "PIBIC",
   "P&D",
