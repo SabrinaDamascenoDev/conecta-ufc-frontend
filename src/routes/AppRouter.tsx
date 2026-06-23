@@ -7,6 +7,7 @@ import { Vagas } from "@/pages/vagas/VagasPage";
 import { Salvos } from "@/pages/salvos/Salvos";
 import { Alertas } from "@/pages/alertas/Alertas";
 import { Perfil } from "@/pages/perfil/Perfil";
+import { VagaDetalhe } from "@/pages/Vaga/VagaDetalhe";
 
 export default function AppRouter() {
   return (
@@ -20,6 +21,7 @@ export default function AppRouter() {
           <Route path='salvos' element={<Salvos />} />
           <Route path='alertas' element={<Alertas />} />
           <Route path="perfil" element={<Perfil />} />
+          <Route path="/vaga/:id" element={<VagaDetalhe />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -12,21 +12,21 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import type { Programa } from "@/mocks/mocksvagas";
+import { type Programa } from "@/hooks/useOportunidades";
 
-const PROGRAMAS: Programa[] = ["PAID", "PID", "PIBIC", "P&D", "PET", "PET-SI", "PPCA", "Extenção"];
-const TAGS_COMUNS = ["CC", "SI", "EC", "ES", "RC", "IA", "DD", "Todos os cursos"];
+const PROGRAMAS: Programa[] = ["PAIP", "PID", "PIBIC", "P&D", "PET", "PET-SI", "PPCA", "Extensão"];
 const FAIXAS_VALOR = ["Até R$ 500", "R$ 501–R$ 700", "R$ 701–R$ 900", "Acima de R$ 900"];
 const PRAZO = ["Encerra em até 7 dias", "Encerra em até 15 dias", "Encerra em até 30 dias"];
+const ORIGEM = ["UFC", "FASTEF", "INSIGHTLAB", "GREAT"];
 
 export type AdvancedFilters = {
   programas: Programa[];
-  tags: string[];
+  origem: string[];
   valor: string[];
   prazo: string[];
 };
 
-const EMPTY: AdvancedFilters = { programas: [], tags: [], valor: [], prazo: [] };
+const EMPTY: AdvancedFilters = { programas: [], origem: [], valor: [], prazo: [] };
 
 interface FilterSheetProps {
   onApply: (filters: AdvancedFilters) => void;
@@ -37,7 +37,7 @@ function toggle<T>(arr: T[], val: T): T[] {
 }
 
 function countActive(f: AdvancedFilters) {
-  return f.programas.length + f.tags.length + f.valor.length + f.prazo.length;
+  return f.programas.length + f.origem.length + f.valor.length + f.prazo.length;
 }
 
 export function FilterSheet({ onApply }: FilterSheetProps) {
@@ -106,27 +106,21 @@ export function FilterSheet({ onApply }: FilterSheetProps) {
             selected={draft.programas}
             onToggle={(v) => set("programas", v as Programa)}
           />
-
           <Separator />
-
           <FilterGroup
-            title="Área / Curso"
-            options={TAGS_COMUNS}
-            selected={draft.tags}
-            onToggle={(v) => set("tags", v)}
+            title="Origem"
+            options={ORIGEM}
+            selected={draft.origem}
+            onToggle={(v) => set("origem", v)}
           />
-
           <Separator />
-
           <FilterGroup
             title="Valor da bolsa"
             options={FAIXAS_VALOR}
             selected={draft.valor}
             onToggle={(v) => set("valor", v)}
           />
-
           <Separator />
-
           <FilterGroup
             title="Prazo de inscrição"
             options={PRAZO}
@@ -165,33 +159,38 @@ interface FilterGroupProps {
   options: readonly string[];
   selected: string[];
   onToggle: (val: string) => void;
+  empty?: string;
 }
 
-function FilterGroup({ title, options, selected, onToggle }: FilterGroupProps) {
+function FilterGroup({ title, options, selected, onToggle, empty }: FilterGroupProps) {
   return (
     <div className="flex flex-col gap-3">
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{title}</p>
-      <div className="flex flex-col gap-2.5">
-        {options.map((opt) => {
-          const id = `filter-${title}-${opt}`;
-          return (
-            <div key={opt} className="flex items-center gap-2.5">
-              <Checkbox
-                id={id}
-                checked={selected.includes(opt)}
-                onCheckedChange={() => onToggle(opt)}
-                className="border-gray-300 data-[state=checked]:bg-[#1a4fa0] data-[state=checked]:border-[#1a4fa0]"
-              />
-              <Label
-                htmlFor={id}
-                className="text-sm text-gray-700 font-normal cursor-pointer select-none"
-              >
-                {opt}
-              </Label>
-            </div>
-          );
-        })}
-      </div>
+      {options.length === 0 && empty ? (
+        <p className="text-xs text-gray-400">{empty}</p>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {options.map((opt) => {
+            const id = `filter-${title}-${opt}`;
+            return (
+              <div key={opt} className="flex items-center gap-2.5">
+                <Checkbox
+                  id={id}
+                  checked={selected.includes(opt)}
+                  onCheckedChange={() => onToggle(opt)}
+                  className="border-gray-300 data-[state=checked]:bg-[#1a4fa0] data-[state=checked]:border-[#1a4fa0]"
+                />
+                <Label
+                  htmlFor={id}
+                  className="text-sm text-gray-700 font-normal cursor-pointer select-none"
+                >
+                  {opt}
+                </Label>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

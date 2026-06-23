@@ -1,23 +1,23 @@
-import { useState, useMemo } from "react";
-import { ArrowUpDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Sidebar } from "../components/Sidebar";
 import { SearchBar } from "../components/Search";
 import { ProgramaFilter } from "../components/Filter";
 import { VagaCard } from "../components/VagaCard";
-import {
-  vagas as vagasInitial,
-  type Vaga,
-  type Programa,
-} from "@/mocks/mocksvagas";
+import { SortDropdown } from "../components/SortDropdown";
 import Sair from "../components/Dialogs/Sair";
 import type { AdvancedFilters } from "../components/FilterSheet";
 import notFound from "@/assets/not-found.svg";
-import { SortDropdown } from "../components/SortDropdown";
-import { useNavigate } from "react-router-dom";
+import {
+  getFavoritos,
+  favoritarVaga,
+  desfavoritarVaga,
+} from "@/services/vagasFavoritasService";
+import { mapearOportunidade, type VagaMapeada, type Programa } from "@/hooks/useOportunidades";
 
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
+
 
 function parseValor(valor: string): number {
   return parseInt(valor.replace(/\D/g, ""), 10) || 0;
@@ -46,6 +46,12 @@ function matchPrazo(encerraEm: number, prazos: string[]): boolean {
 }
 
 export function Salvos() {
+  const navigate = useNavigate();
+
+  const [vagas, setVagas] = useState<VagaMapeada[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<FilterOption>("Todas");
   const [sort, setSort] = useState<SortValue>("recentes");
@@ -55,15 +61,74 @@ export function Salvos() {
     valor: [],
     prazo: [],
   });
-  const [vagas, setVagas] = useState<Vaga[]>(vagasInitial);
-  const vagasSalvas = useMemo(() => vagas.filter((v) => v.salvo), [vagas]);
-  const navigate = useNavigate();
+
+ 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const raw = await getFavoritos();
+        if (cancelled) return;
+
+        const mapeadas = raw
+          .map((o) => mapearOportunidade(o))
+          .filter((v): v is VagaMapeada => v !== null)
+          .map((v) => ({ ...v, salvo: true }));
+
+        setVagas(mapeadas);
+      } catch (e) {
+        if (!cancelled)
+          setError(e instanceof Error ? e.message : "Erro ao carregar favoritos");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, []);
+
+
+  const handleSave = useCallback(async (id: number) => {
+    let estadoAnterior: boolean | null = null;
+
+    setVagas((prev) => {
+      const vaga = prev.find((v) => v.id === id);
+      if (!vaga) return prev;
+      estadoAnterior = vaga.salvo;
+      return prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v));
+    });
+
+    try {
+      if (estadoAnterior === false) {
+        await favoritarVaga({ oportunidade_id: id });
+      } else {
+        await desfavoritarVaga({ oportunidade_id: id });
+      }
+    } catch (e) {
+
+      setVagas((prev) =>
+        prev.map((v) =>
+          v.id === id && estadoAnterior !== null
+            ? { ...v, salvo: estadoAnterior as boolean }
+            : v
+        )
+      );
+      console.error("Erro ao atualizar favorito:", e);
+    }
+  }, []);
 
   const vagasFiltradas = useMemo(() => {
-    let result = vagas;
+    let result = vagas.filter((v) => v.salvo);
+
     if (filtro !== "Todas") {
       result = result.filter((v) => v.programa === filtro);
     }
+
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
@@ -71,57 +136,47 @@ export function Salvos() {
           v.titulo.toLowerCase().includes(q) ||
           v.descricao.toLowerCase().includes(q) ||
           v.coordenador.toLowerCase().includes(q) ||
-          v.tags.some((t) => t.toLowerCase().includes(q)),
+          v.tags.some((t) => t.toLowerCase().includes(q))
       );
     }
 
     if (advancedFilters.programas.length > 0) {
       result = result.filter((v) =>
-        advancedFilters.programas.includes(v.programa),
+        advancedFilters.programas.includes(v.programa)
       );
     }
 
     if (advancedFilters.tags.length > 0) {
       result = result.filter((v) =>
-        advancedFilters.tags.some((tag) => v.tags.includes(tag)),
+        advancedFilters.tags.some((tag) => v.tags.includes(tag))
       );
     }
 
     if (advancedFilters.valor.length > 0) {
-      result = result.filter((v) => matchValor(v.valor, advancedFilters.valor));
+      result = result.filter((v) =>
+        matchValor(v.remuneracao, advancedFilters.valor)
+      );
     }
 
     if (advancedFilters.prazo.length > 0) {
       result = result.filter((v) =>
-        matchPrazo(v.encerraEm, advancedFilters.prazo),
+        matchPrazo(v.encerraEm, advancedFilters.prazo)
       );
     }
 
-    result = [...result].sort((a, b) => {
+    return [...result].sort((a, b) => {
       switch (sort) {
-        case "recentes":
-          return a.encerraEm - b.encerraEm;
-        case "antigas":
-          return b.encerraEm - a.encerraEm;
-        case "az":
-          return a.titulo.localeCompare(b.titulo, "pt-BR");
-        case "za":
-          return b.titulo.localeCompare(a.titulo, "pt-BR");
-        default:
-          return 0;
+        case "recentes": return a.encerraEm - b.encerraEm;
+        case "antigas":  return b.encerraEm - a.encerraEm;
+        case "az":       return a.titulo.localeCompare(b.titulo, "pt-BR");
+        case "za":       return b.titulo.localeCompare(a.titulo, "pt-BR");
+        default:         return 0;
       }
     });
-    return result;
   }, [vagas, filtro, search, sort, advancedFilters]);
 
-  function handleSave(id: number) {
-    setVagas((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v)),
-    );
-  }
-
   function handleSaberMais(id: number) {
-    alert(`Abrindo detalhes da vaga #${id}`);
+    navigate(`/vagas/${id}`);
   }
 
   return (
@@ -136,20 +191,24 @@ export function Salvos() {
               onApplyFilters={setAdvancedFilters}
             />
           </div>
-          <div
-            className="flex items-center gap-2 ml-auto">
-            <button className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center cursor-pointer justify-center text-xs font-bold text-white" onClick={() => navigate("/perfil")}>
+          <div className="flex items-center gap-2 ml-auto">
+            <button
+              className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center cursor-pointer justify-center text-xs font-bold text-white"
+              onClick={() => navigate("/perfil")}
+            >
               SD
             </button>
             <Sair />
           </div>
         </div>
+
         <div className="px-8 pt-6 pb-10 flex flex-col gap-5">
           <ProgramaFilter selected={filtro} onChange={setFiltro} />
+
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
-              <span className="text-foreground">{vagasSalvas.length}</span>{" "}
-              {vagasSalvas.length === 1
+              <span className="text-foreground">{vagasFiltradas.length}</span>{" "}
+              {vagasFiltradas.length === 1
                 ? "oportunidade encontrada"
                 : "oportunidades encontradas"}
             </p>
@@ -158,7 +217,18 @@ export function Salvos() {
               onChange={(v) => setSort(v as SortValue)}
             />
           </div>
-          {vagasFiltradas.length > 0 && vagasFiltradas.some((v) => v.salvo) ? (
+
+          {loading && (
+            <p className="text-sm text-gray-400 text-center py-10">
+              Carregando favoritos…
+            </p>
+          )}
+
+          {error && !loading && (
+            <p className="text-sm text-red-500 text-center py-10">{error}</p>
+          )}
+
+          {!loading && !error && vagasFiltradas.length > 0 ? (
             <div className="flex flex-col gap-4">
               {vagasFiltradas.map((vaga) => (
                 <VagaCard
@@ -170,21 +240,21 @@ export function Salvos() {
               ))}
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-              <img
-                src={notFound}
-                alt="Nenhuma vaga encontrada"
-                className="w-80 md:w-96 mb-8 opacity-80"
-              />
-
-              <p className="text-2xl font-bold text-black">
-                Nenhuma vaga encontrada
-              </p>
-
-              <p className="text-base mt-2 text-gray-500">
-                Tente ajustar os filtros ou a busca
-              </p>
-            </div>
+            !loading && !error && (
+              <div className="flex flex-col items-center justify-center h-full py-20 text-center">
+                <img
+                  src={notFound}
+                  alt="Nenhuma vaga encontrada"
+                  className="w-80 md:w-96 mb-8 opacity-80"
+                />
+                <p className="text-2xl font-bold text-black">
+                  Nenhuma vaga encontrada
+                </p>
+                <p className="text-base mt-2 text-gray-500">
+                  Tente ajustar os filtros ou a busca
+                </p>
+              </div>
+            )
           )}
         </div>
       </main>

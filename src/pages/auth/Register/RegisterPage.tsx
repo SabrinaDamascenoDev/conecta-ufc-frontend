@@ -20,14 +20,14 @@ import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 
 const OPPORTUNITY_TAGS = [
-  "PAID",
+  "PAIP",
   "PID",
   "PIBIC",
   "P&D",
   "PET",
   "PET-SI",
   "PPCA",
-  "Extenção",
+  "Extensão",
 ];
 
 export default function RegisterPage() {
