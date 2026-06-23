@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { fetchOportunidades } from "../services/vagasService";
 
 export type Programa = "PAIP" | "PID" | "PIBIC" | "P&D" | "PET" | "PET-SI" | "PPCA" | "Extensão";
 
@@ -61,8 +62,6 @@ export interface OportunidadesParams {
   tipo?: string;
 }
 
-// ─── helpers ────────────────────────────────────────────────────────────────
-
 function diasRestantes(dataFim: string): number {
   const fim = new Date(dataFim);
   const hoje = new Date();
@@ -94,6 +93,7 @@ function formatarValor(remuneracao: number | string): string {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+
 function normalizarTipo(tipo: string): string {
   return tipo.toUpperCase().trim().replace(/\s+/g, " ");
 }
@@ -101,7 +101,6 @@ function normalizarTipo(tipo: string): string {
 function normalizarPrograma(tipo: string): Programa | null {
   const t = normalizarTipo(tipo);
 
-  // Extensão — captura qualquer variação de grafia
   if (t.includes("EXTEN")) return "Extensão";
 
   const map: Record<string, Programa> = {
@@ -118,7 +117,6 @@ function normalizarPrograma(tipo: string): Programa | null {
     PPCA:                "PPCA",
   };
 
-  // Match exato primeiro, depois por prefixo (ex: "PAIP 2026" → "PAIP")
   if (map[t]) return map[t];
   const chave = Object.keys(map).find((k) => t.startsWith(k));
   if (chave) return map[chave];
@@ -147,7 +145,7 @@ function tagsDoTipo(tipo: string): string[] {
   return chave ? map[chave] : [tipo];
 }
 
-function mapearOportunidade(o: OportunidadeAPI): VagaMapeada | null {
+export function mapearOportunidade(o: OportunidadeAPI): VagaMapeada | null {
   const programa = normalizarPrograma(o.tipo);
   if (!programa) return null;
 
@@ -176,7 +174,7 @@ function mapearOportunidade(o: OportunidadeAPI): VagaMapeada | null {
   };
 }
 
-// ─── programa → string que o backend aceita no campo `tipo` ─────────────────
+
 export const PROGRAMA_PARA_TIPO: Partial<Record<Programa, string>> = {
   PAIP:     "PAIP",
   PID:      "PID",
@@ -188,22 +186,6 @@ export const PROGRAMA_PARA_TIPO: Partial<Record<Programa, string>> = {
   Extensão: "Extensão",
 };
 
-// ─── API ─────────────────────────────────────────────────────────────────────
-
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-
-function buildUrl(params: OportunidadesParams): string {
-  const qs = new URLSearchParams();
-  if (params.page)           qs.set("page",   String(params.page));
-  if (params.size)           qs.set("size",   String(params.size));
-  if (params.busca?.trim())  qs.set("busca",  params.busca.trim());
-  if (params.origem?.trim()) qs.set("origem", params.origem.trim());
-  if (params.tipo?.trim())   qs.set("tipo",   params.tipo.trim());
-  const str = qs.toString();
-  return `${API_BASE}/oportunidades${str ? `?${str}` : ""}`;
-}
-
-// ─── hook ────────────────────────────────────────────────────────────────────
 
 export interface UseOportunidadesReturn {
   vagas: VagaMapeada[];
@@ -226,7 +208,6 @@ const DEFAULT_META: PaginationMeta = {
 };
 
 export function useOportunidades(): UseOportunidadesReturn {
-  // params guardado em ref para não causar re-fetch ao ser passado como dep
   const [params, setParamsState] = useState<OportunidadesParams>({
     page: 1,
     size: 20,
@@ -240,24 +221,12 @@ export function useOportunidades(): UseOportunidadesReturn {
   useEffect(() => {
     let cancelled = false;
 
-    async function fetchOportunidades() {
+    async function load() {
       try {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(buildUrl(params), {
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.detail ?? `Erro ${res.status}`);
-        }
-
-        const json = await res.json();
-
-        const raw: OportunidadeAPI[] = Array.isArray(json) ? json : (json.data ?? []);
-        const metaApi: PaginationMeta | undefined = json.meta;
+        const { data: raw, meta: metaApi } = await fetchOportunidades(params);
 
         if (!cancelled) {
           const mapeadas = raw
@@ -265,16 +234,14 @@ export function useOportunidades(): UseOportunidadesReturn {
             .filter((v): v is VagaMapeada => v !== null);
 
           setVagas(mapeadas);
-          if (metaApi) {
-            setMeta(metaApi);
-          } else {
-            setMeta({
+          setMeta(
+            metaApi ?? {
               ...DEFAULT_META,
               total_elements: mapeadas.length,
               current_page: params.page ?? 1,
               size: params.size ?? 20,
-            });
-          }
+            }
+          );
         }
       } catch (e) {
         if (!cancelled)
@@ -284,7 +251,7 @@ export function useOportunidades(): UseOportunidadesReturn {
       }
     }
 
-    fetchOportunidades();
+    load();
     return () => { cancelled = true; };
   }, [params]);
 

@@ -44,7 +44,6 @@ export function Vagas() {
   const { vagas, toggleSalvo, loading, error, meta, goToPage, setParams } =
     useOportunidades();
 
-  // Sincroniza busca + tipo com o backend
   useEffect(() => {
     const tipo: string | undefined = (() => {
       if (advancedFilters.programas.length === 1)
@@ -58,10 +57,9 @@ export function Vagas() {
       busca: debouncedSearch || undefined,
       tipo,
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [debouncedSearch, filtro, advancedFilters.programas]);
 
-  // Ordenação puramente client-side — não dispara fetch
   const vagasOrdenadas = [...vagas].sort((a, b) => {
     switch (sort) {
         case "recentes": return a.dataCriacao.getTime() - b.dataCriacao.getTime();
