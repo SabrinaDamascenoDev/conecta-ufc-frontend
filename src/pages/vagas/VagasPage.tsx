@@ -38,7 +38,7 @@ export function Vagas() {
   const [sort, setSort] = useState<SortValue>("recentes");
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
     programas: [],
-    tags: [],
+    origem: [],
     valor: [],
     prazo: [],
   });
@@ -47,6 +47,7 @@ export function Vagas() {
 
   const { vagas, setVagas, loading, error, meta, goToPage, setParams } =
     useOportunidades();
+
 
   useEffect(() => {
     const tipo: string | undefined = (() => {
@@ -57,18 +58,20 @@ export function Vagas() {
       return undefined;
     })();
 
+    const origem =
+      advancedFilters.origem.length === 1 ? advancedFilters.origem[0] : undefined;
+
     setParams({
       busca: debouncedSearch || undefined,
       tipo,
+      origem,
     });
-  }, [debouncedSearch, filtro, advancedFilters.programas]);
+  }, [debouncedSearch, filtro, advancedFilters.programas, advancedFilters.origem]);
 
-  // ─── Toggle favorito com chamada à API ───────────────────────────────────
 
   const handleSave = useCallback(async (id: number) => {
     let estadoAnterior: boolean | null = null;
 
-    // Atualização otimista
     setVagas((prev) => {
       const vaga = prev.find((v) => v.id === id);
       if (!vaga) return prev;
@@ -83,7 +86,6 @@ export function Vagas() {
         await desfavoritarVaga({ oportunidade_id: id });
       }
     } catch (e) {
-      // Reverte em caso de erro
       setVagas((prev) =>
         prev.map((v) =>
           v.id === id && estadoAnterior !== null
@@ -94,8 +96,6 @@ export function Vagas() {
       console.error("Erro ao atualizar favorito:", e);
     }
   }, [setVagas]);
-
-  // ─── Ordenação local ─────────────────────────────────────────────────────
 
   const vagasOrdenadas = [...vagas].sort((a, b) => {
     switch (sort) {

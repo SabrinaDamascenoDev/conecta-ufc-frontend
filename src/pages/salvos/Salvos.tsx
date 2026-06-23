@@ -18,7 +18,6 @@ import { mapearOportunidade, type VagaMapeada, type Programa } from "@/hooks/use
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
 
-// ─── Helpers de filtro ────────────────────────────────────────────────────────
 
 function parseValor(valor: string): number {
   return parseInt(valor.replace(/\D/g, ""), 10) || 0;
@@ -46,8 +45,6 @@ function matchPrazo(encerraEm: number, prazos: string[]): boolean {
   });
 }
 
-// ─── Componente ───────────────────────────────────────────────────────────────
-
 export function Salvos() {
   const navigate = useNavigate();
 
@@ -65,8 +62,7 @@ export function Salvos() {
     prazo: [],
   });
 
-  // ─── Carrega favoritos da API ─────────────────────────────────────────────
-
+ 
   useEffect(() => {
     let cancelled = false;
 
@@ -96,12 +92,10 @@ export function Salvos() {
     return () => { cancelled = true; };
   }, []);
 
-  // ─── Toggle salvo ─────────────────────────────────────────────────────────
 
   const handleSave = useCallback(async (id: number) => {
     let estadoAnterior: boolean | null = null;
 
-    // Atualização otimista — captura o estado anterior dentro do setter
     setVagas((prev) => {
       const vaga = prev.find((v) => v.id === id);
       if (!vaga) return prev;
@@ -116,7 +110,7 @@ export function Salvos() {
         await desfavoritarVaga({ oportunidade_id: id });
       }
     } catch (e) {
-      // Reverte em caso de erro
+
       setVagas((prev) =>
         prev.map((v) =>
           v.id === id && estadoAnterior !== null
@@ -127,8 +121,6 @@ export function Salvos() {
       console.error("Erro ao atualizar favorito:", e);
     }
   }, []);
-
-  // ─── Filtros e ordenação ──────────────────────────────────────────────────
 
   const vagasFiltradas = useMemo(() => {
     let result = vagas.filter((v) => v.salvo);
@@ -186,8 +178,6 @@ export function Salvos() {
   function handleSaberMais(id: number) {
     navigate(`/vagas/${id}`);
   }
-
-  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="flex min-h-screen bg-white font-sans">
