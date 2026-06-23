@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { SearchBar } from "../components/Search";
 import { ProgramaFilter } from "../components/Filter";
@@ -11,6 +11,10 @@ import {
   type Programa,
   PROGRAMA_PARA_TIPO,
 } from "@/hooks/useOportunidades";
+import {
+  favoritarVaga,
+  desfavoritarVaga,
+} from "@/services/vagasFavoritasService";
 import Sair from "../components/Dialogs/Sair";
 import notFound from "@/assets/not-found.svg";
 import { useNavigate } from "react-router-dom";
@@ -41,7 +45,7 @@ export function Vagas() {
 
   const debouncedSearch = useDebounce(search, 400);
 
-  const { vagas, toggleSalvo, loading, error, meta, goToPage, setParams } =
+  const { vagas, setVagas, loading, error, meta, goToPage, setParams } =
     useOportunidades();
 
   useEffect(() => {
@@ -57,17 +61,50 @@ export function Vagas() {
       busca: debouncedSearch || undefined,
       tipo,
     });
-
   }, [debouncedSearch, filtro, advancedFilters.programas]);
+
+  // ─── Toggle favorito com chamada à API ───────────────────────────────────
+
+  const handleSave = useCallback(async (id: number) => {
+    let estadoAnterior: boolean | null = null;
+
+    // Atualização otimista
+    setVagas((prev) => {
+      const vaga = prev.find((v) => v.id === id);
+      if (!vaga) return prev;
+      estadoAnterior = vaga.salvo;
+      return prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v));
+    });
+
+    try {
+      if (estadoAnterior === false) {
+        await favoritarVaga({ oportunidade_id: id });
+      } else {
+        await desfavoritarVaga({ oportunidade_id: id });
+      }
+    } catch (e) {
+      // Reverte em caso de erro
+      setVagas((prev) =>
+        prev.map((v) =>
+          v.id === id && estadoAnterior !== null
+            ? { ...v, salvo: estadoAnterior as boolean }
+            : v
+        )
+      );
+      console.error("Erro ao atualizar favorito:", e);
+    }
+  }, [setVagas]);
+
+  // ─── Ordenação local ─────────────────────────────────────────────────────
 
   const vagasOrdenadas = [...vagas].sort((a, b) => {
     switch (sort) {
-        case "recentes": return a.dataCriacao.getTime() - b.dataCriacao.getTime();
-        case "antigas":  return b.dataCriacao.getTime() - a.dataCriacao.getTime();
-        case "az":       return a.titulo.localeCompare(b.titulo, "pt-BR");
-        case "za":       return b.titulo.localeCompare(a.titulo, "pt-BR");
-        default:         return 0;
-      }
+      case "recentes": return a.dataCriacao.getTime() - b.dataCriacao.getTime();
+      case "antigas":  return b.dataCriacao.getTime() - a.dataCriacao.getTime();
+      case "az":       return a.titulo.localeCompare(b.titulo, "pt-BR");
+      case "za":       return b.titulo.localeCompare(a.titulo, "pt-BR");
+      default:         return 0;
+    }
   });
 
   const navigate = useNavigate();
@@ -148,7 +185,7 @@ export function Vagas() {
                 <VagaCard
                   key={vaga.id}
                   vaga={vaga}
-                  onSave={toggleSalvo}
+                  onSave={handleSave}
                   onSaberMais={(id) => navigate(`/vaga/${id}`)}
                 />
               ))}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { fetchOportunidades } from "../services/vagasService";
+import { getFavoritos } from "../services/vagasFavoritasService";
 
 export type Programa = "PAIP" | "PID" | "PIBIC" | "P&D" | "PET" | "PET-SI" | "PPCA" | "Extensão";
 
@@ -62,6 +63,8 @@ export interface OportunidadesParams {
   tipo?: string;
 }
 
+// ─── Helpers de formatação ────────────────────────────────────────────────────
+
 function diasRestantes(dataFim: string): number {
   const fim = new Date(dataFim);
   const hoje = new Date();
@@ -93,6 +96,7 @@ function formatarValor(remuneracao: number | string): string {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+// ─── Mapeamento de tipos ──────────────────────────────────────────────────────
 
 function normalizarTipo(tipo: string): string {
   return tipo.toUpperCase().trim().replace(/\s+/g, " ");
@@ -174,6 +178,7 @@ export function mapearOportunidade(o: OportunidadeAPI): VagaMapeada | null {
   };
 }
 
+// ─── Constantes públicas ──────────────────────────────────────────────────────
 
 export const PROGRAMA_PARA_TIPO: Partial<Record<Programa, string>> = {
   PAIP:     "PAIP",
@@ -186,6 +191,7 @@ export const PROGRAMA_PARA_TIPO: Partial<Record<Programa, string>> = {
   Extensão: "Extensão",
 };
 
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export interface UseOportunidadesReturn {
   vagas: VagaMapeada[];
@@ -218,6 +224,15 @@ export function useOportunidades(): UseOportunidadesReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // IDs dos favoritos do usuário — carregado uma vez e mantido entre páginas
+  const [favoritosIds, setFavoritosIds] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    getFavoritos()
+      .then((lista) => setFavoritosIds(new Set(lista.map((o) => o.id))))
+      .catch(() => {/* silencioso — favoritos são best-effort */});
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -231,7 +246,8 @@ export function useOportunidades(): UseOportunidadesReturn {
         if (!cancelled) {
           const mapeadas = raw
             .map(mapearOportunidade)
-            .filter((v): v is VagaMapeada => v !== null);
+            .filter((v): v is VagaMapeada => v !== null)
+            .map((v) => ({ ...v, salvo: favoritosIds.has(v.id) }));
 
           setVagas(mapeadas);
           setMeta(
@@ -253,7 +269,7 @@ export function useOportunidades(): UseOportunidadesReturn {
 
     load();
     return () => { cancelled = true; };
-  }, [params]);
+  }, [params, favoritosIds]);
 
   const goToPage = useCallback((page: number) => {
     setParamsState((prev) => ({ ...prev, page }));
@@ -278,6 +294,13 @@ export function useOportunidades(): UseOportunidadesReturn {
     setVagas((prev) =>
       prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v))
     );
+    // Mantém favoritosIds sincronizado para persistir entre trocas de página
+    setFavoritosIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   return { vagas, setVagas, toggleSalvo, loading, error, meta, goToPage, setParams };
