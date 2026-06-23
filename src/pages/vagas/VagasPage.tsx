@@ -64,12 +64,12 @@ export function Vagas() {
   // Ordenação puramente client-side — não dispara fetch
   const vagasOrdenadas = [...vagas].sort((a, b) => {
     switch (sort) {
-      case "recentes": return b.dataCriacao.getTime() - a.dataCriacao.getTime();
-      case "antigas":  return a.dataCriacao.getTime() - b.dataCriacao.getTime();
-      case "az":       return a.titulo.localeCompare(b.titulo, "pt-BR");
-      case "za":       return b.titulo.localeCompare(a.titulo, "pt-BR");
-      default:         return 0;
-    }
+        case "recentes": return a.dataCriacao.getTime() - b.dataCriacao.getTime();
+        case "antigas":  return b.dataCriacao.getTime() - a.dataCriacao.getTime();
+        case "az":       return a.titulo.localeCompare(b.titulo, "pt-BR");
+        case "za":       return b.titulo.localeCompare(a.titulo, "pt-BR");
+        default:         return 0;
+      }
   });
 
   const navigate = useNavigate();

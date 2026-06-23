@@ -297,14 +297,14 @@ export function useOportunidades(): UseOportunidadesReturn {
       setParamsState((prev) => {
         const next = { ...prev, ...partial, page: 1 };
         if (
-          next.busca   === prev.busca &&
-          next.tipo    === prev.tipo  &&
-          next.origem  === prev.origem
-        ) return prev; // mesmos valores → não troca referência → não re-fetcha
+          next.busca === prev.busca &&
+          next.tipo === prev.tipo &&
+          next.origem === prev.origem
+        ) return prev;
         return next;
       });
     },
-    [] // setParamsState é estável, [] é seguro aqui
+    []
   );
 
   function toggleSalvo(id: number) {
