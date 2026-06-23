@@ -17,7 +17,7 @@ const programas = [
   "PET",
   "PET-SI",
   "PPCA",
-  "Extenção",
+  "Extensão",
 ];
 const cursos = [
   "Ciência da Computação",

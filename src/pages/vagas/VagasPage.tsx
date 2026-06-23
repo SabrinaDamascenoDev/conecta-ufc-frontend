@@ -1,11 +1,16 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { SearchBar } from "../components/Search";
 import { ProgramaFilter } from "../components/Filter";
 import { VagaCard } from "../components/VagaCard";
 import { SortDropdown } from "../components/SortDropdown";
+import { Pagination } from "../components/Pagination";
 import { type AdvancedFilters } from "../components/FilterSheet";
-import { useOportunidades, type Programa } from "@/hooks/useOportunidades";
+import {
+  useOportunidades,
+  type Programa,
+  PROGRAMA_PARA_TIPO,
+} from "@/hooks/useOportunidades";
 import Sair from "../components/Dialogs/Sair";
 import notFound from "@/assets/not-found.svg";
 import { useNavigate } from "react-router-dom";
@@ -14,42 +19,19 @@ import { Loader2 } from "lucide-react";
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
 
-function parseValor(valor: string): number {
-  // Lida com formato pt-BR: "R$ 1.400,00" → 1400
-  const limpo = valor
-    .replace(/[R$\s]/g, "")   // remove "R$" e espaços
-    .replace(/\./g, "")       // remove separador de milhar
-    .replace(",", ".");        // vírgula decimal → ponto
-  return parseFloat(limpo) || 0;
-}
-
-function matchValor(valor: string, faixas: string[]): boolean {
-  if (faixas.length === 0) return true;
-  const n = parseValor(valor);
-  return faixas.some((f) => {
-    if (f === "Até R$ 500")      return n <= 500;
-    if (f === "R$ 501–R$ 700")   return n >= 501 && n <= 700;
-    if (f === "R$ 701–R$ 900")   return n >= 701 && n <= 900;
-    if (f === "Acima de R$ 900") return n > 900;
-    return false;
-  });
-}
-
-function matchPrazo(encerraEm: number, prazos: string[]): boolean {
-  if (prazos.length === 0) return true;
-  if (encerraEm === 0) return false; // já encerrou, não exibir
-  return prazos.some((p) => {
-    if (p === "Encerra em até 7 dias")  return encerraEm <= 7;
-    if (p === "Encerra em até 15 dias") return encerraEm <= 15;
-    if (p === "Encerra em até 30 dias") return encerraEm <= 30;
-    return false;
-  });
+function useDebounce<T>(value: T, delay = 400): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return debounced;
 }
 
 export function Vagas() {
-  const [search, setSearch]   = useState("");
-  const [filtro, setFiltro]   = useState<FilterOption>("Todas");
-  const [sort, setSort]       = useState<SortValue>("recentes");
+  const [search, setSearch] = useState("");
+  const [filtro, setFiltro] = useState<FilterOption>("Todas");
+  const [sort, setSort] = useState<SortValue>("recentes");
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
     programas: [],
     tags: [],
@@ -57,58 +39,49 @@ export function Vagas() {
     prazo: [],
   });
 
-  const { vagas, toggleSalvo, loading, error } = useOportunidades();
+  const debouncedSearch = useDebounce(search, 400);
+
+  const { vagas, toggleSalvo, loading, error, meta, goToPage, setParams } =
+    useOportunidades();
+
+  // Sincroniza busca + tipo com o backend
+  useEffect(() => {
+    const tipo: string | undefined = (() => {
+      if (advancedFilters.programas.length === 1)
+        return PROGRAMA_PARA_TIPO[advancedFilters.programas[0]] ?? undefined;
+      if (advancedFilters.programas.length === 0 && filtro !== "Todas")
+        return PROGRAMA_PARA_TIPO[filtro] ?? undefined;
+      return undefined;
+    })();
+
+    setParams({
+      busca: debouncedSearch || undefined,
+      tipo,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, filtro, advancedFilters.programas]);
+
+  // Ordenação puramente client-side — não dispara fetch
+  const vagasOrdenadas = [...vagas].sort((a, b) => {
+    switch (sort) {
+      case "recentes": return b.dataCriacao.getTime() - a.dataCriacao.getTime();
+      case "antigas":  return a.dataCriacao.getTime() - b.dataCriacao.getTime();
+      case "az":       return a.titulo.localeCompare(b.titulo, "pt-BR");
+      case "za":       return b.titulo.localeCompare(a.titulo, "pt-BR");
+      default:         return 0;
+    }
+  });
+
   const navigate = useNavigate();
 
-  const vagasFiltradas = useMemo(() => {
-    let result = vagas;
+  function handleFiltroRapido(value: FilterOption) {
+    setFiltro(value);
+    setAdvancedFilters((prev) => ({ ...prev, programas: [] }));
+  }
 
-    if (filtro !== "Todas") {
-      result = result.filter((v) => v.programa === filtro);
-    }
-
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (v) =>
-          v.titulo.toLowerCase().includes(q) ||
-          v.descricao.toLowerCase().includes(q) ||
-          v.coordenador.toLowerCase().includes(q) ||
-          v.tags.some((t) => t.toLowerCase().includes(q))
-      );
-    }
-
-    if (advancedFilters.programas.length > 0) {
-      result = result.filter((v) => advancedFilters.programas.includes(v.programa));
-    }
-
-    if (advancedFilters.tags.length > 0) {
-      result = result.filter((v) =>
-        advancedFilters.tags.some((tag) => v.tags.includes(tag))
-      );
-    }
-
-    if (advancedFilters.valor.length > 0) {
-      result = result.filter((v) => matchValor(v.remuneracao, advancedFilters.valor));
-    }
-
-    if (advancedFilters.prazo.length > 0) {
-      result = result.filter((v) => matchPrazo(v.encerraEm, advancedFilters.prazo));
-    }
-
-    return [...result].sort((a, b) => {
-      switch (sort) {
-        case "recentes": return a.dataCriacao.getTime() - b.dataCriacao.getTime();
-        case "antigas":  return b.dataCriacao.getTime() - a.dataCriacao.getTime();
-        case "az":       return a.titulo.localeCompare(b.titulo, "pt-BR");
-        case "za":       return b.titulo.localeCompare(a.titulo, "pt-BR");
-        default:         return 0;
-      }
-    });
-  }, [vagas, filtro, search, sort, advancedFilters]);
-
-  function handleSaberMais(id: number) {
-    navigate(`/vaga/${id}`);
+  function handleAdvancedFilters(filters: AdvancedFilters) {
+    setAdvancedFilters(filters);
+    if (filters.programas.length > 0) setFiltro("Todas");
   }
 
   return (
@@ -121,7 +94,7 @@ export function Vagas() {
             <SearchBar
               value={search}
               onChange={setSearch}
-              onApplyFilters={setAdvancedFilters}
+              onApplyFilters={handleAdvancedFilters}
             />
           </div>
           <div className="flex items-center gap-2 ml-auto">
@@ -136,7 +109,7 @@ export function Vagas() {
         </div>
 
         <div className="px-8 pt-6 pb-10 flex flex-col gap-5">
-          <ProgramaFilter selected={filtro} onChange={setFiltro} />
+          <ProgramaFilter selected={filtro} onChange={handleFiltroRapido} />
 
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
@@ -147,8 +120,8 @@ export function Vagas() {
                 </span>
               ) : (
                 <>
-                  <span className="text-foreground">{vagasFiltradas.length}</span>{" "}
-                  {vagasFiltradas.length === 1
+                  <span className="text-foreground">{meta.total_elements}</span>{" "}
+                  {meta.total_elements === 1
                     ? "oportunidade encontrada"
                     : "oportunidades encontradas"}
                 </>
@@ -166,39 +139,34 @@ export function Vagas() {
           {loading && (
             <div className="flex flex-col gap-4">
               {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="bg-[#F2F2F2] rounded-2xl px-6 py-5 animate-pulse h-36"
-                />
+                <div key={i} className="bg-[#F2F2F2] rounded-2xl px-6 py-5 animate-pulse h-36" />
               ))}
             </div>
           )}
 
-          {!loading && !error && vagasFiltradas.length > 0 && (
+          {!loading && !error && vagasOrdenadas.length > 0 && (
             <div className="flex flex-col gap-4">
-              {vagasFiltradas.map((vaga) => (
+              {vagasOrdenadas.map((vaga) => (
                 <VagaCard
                   key={vaga.id}
                   vaga={vaga}
                   onSave={toggleSalvo}
-                  onSaberMais={handleSaberMais}
+                  onSaberMais={(id) => navigate(`/vaga/${id}`)}
                 />
               ))}
             </div>
           )}
 
-          {!loading && !error && vagasFiltradas.length === 0 && (
+          {!loading && !error && vagasOrdenadas.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-              <img
-                src={notFound}
-                alt="Nenhuma vaga encontrada"
-                className="w-80 md:w-96 mb-8 opacity-80"
-              />
+              <img src={notFound} alt="Nenhuma vaga encontrada" className="w-80 md:w-96 mb-8 opacity-80" />
               <p className="text-2xl font-bold text-black">Nenhuma vaga encontrada</p>
-              <p className="text-base mt-2 text-gray-500">
-                Tente ajustar os filtros ou a busca
-              </p>
+              <p className="text-base mt-2 text-gray-500">Tente ajustar os filtros ou a busca</p>
             </div>
+          )}
+
+          {!error && (
+            <Pagination meta={meta} onPageChange={goToPage} disabled={loading} />
           )}
         </div>
       </main>

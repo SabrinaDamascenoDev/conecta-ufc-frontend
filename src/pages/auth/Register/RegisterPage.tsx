@@ -27,7 +27,7 @@ const OPPORTUNITY_TAGS = [
   "PET",
   "PET-SI",
   "PPCA",
-  "Extenção",
+  "Extensão",
 ];
 
 export default function RegisterPage() {

@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { type Programa } from "@/hooks/useOportunidades";
 
-const PROGRAMAS: Programa[] = ["PAIP", "PID", "PIBIC", "P&D", "PET", "PET-SI", "PPCA", "Extenção"];
+const PROGRAMAS: Programa[] = ["PAIP", "PID", "PIBIC", "P&D", "PET", "PET-SI", "PPCA", "Extensão"];
 const TAGS_COMUNS = ["CC", "SI", "EC", "ES", "RC", "IA", "DD", "Todos os cursos"];
 const FAIXAS_VALOR = ["Até R$ 500", "R$ 501–R$ 700", "R$ 701–R$ 900", "Acima de R$ 900"];
 const PRAZO = ["Encerra em até 7 dias", "Encerra em até 15 dias", "Encerra em até 30 dias"];

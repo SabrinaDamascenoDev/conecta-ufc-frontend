@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
-export type Programa = "PAIP" | "PID" | "PIBIC" | "P&D" | "PET" | "PET-SI" | "PPCA" | "Extenção";
+export type Programa = "PAIP" | "PID" | "PIBIC" | "P&D" | "PET" | "PET-SI" | "PPCA" | "Extensão";
 
 export interface ResultadoAPI {
   id: number;
@@ -23,6 +23,15 @@ export interface OportunidadeAPI {
   resultados: ResultadoAPI[];
 }
 
+export interface PaginationMeta {
+  total_elements: number;
+  total_pages: number;
+  current_page: number;
+  size: number;
+  has_next: boolean;
+  has_previous: boolean;
+}
+
 export interface VagaMapeada {
   id: number;
   titulo: string;
@@ -43,6 +52,16 @@ export interface VagaMapeada {
   temResultados: boolean;
   resultados: ResultadoAPI[];
 }
+
+export interface OportunidadesParams {
+  page?: number;
+  size?: number;
+  busca?: string;
+  origem?: string;
+  tipo?: string;
+}
+
+// ─── helpers ────────────────────────────────────────────────────────────────
 
 function diasRestantes(dataFim: string): number {
   const fim = new Date(dataFim);
@@ -82,34 +101,34 @@ function normalizarTipo(tipo: string): string {
 function normalizarPrograma(tipo: string): Programa | null {
   const t = normalizarTipo(tipo);
 
-  if (t.includes("EXTEN")) return "Extenção";
+  // Extensão — captura qualquer variação de grafia
+  if (t.includes("EXTEN")) return "Extensão";
 
   const map: Record<string, Programa> = {
-    PAIP: "PAIP",
-    PID: "PID",
-    PIBIC: "PIBIC",
-    PIBIT: "PIBIC",
-    "P&D": "P&D",
-    PD: "P&D",
+    PAIP:                "PAIP",
+    PID:                 "PID",
+    PIBIC:               "PIBIC",
+    PIBIT:               "PIBIC",
+    "P&D":               "P&D",
+    PD:                  "P&D",
     "PROCESSO SELETIVO": "P&D",
-    PROCESSOSELETIVO: "P&D",
-    PET: "PET",
-    "PET-SI": "PET-SI",
-    PPCA: "PPCA",
+    PROCESSOSELETIVO:    "P&D",
+    PET:                 "PET",
+    "PET-SI":            "PET-SI",
+    PPCA:                "PPCA",
   };
 
-  const resultado = map[t];
-  if (!resultado) {
-    // Loga no console para facilitar depuração de tipos desconhecidos da API
-    console.warn(`[useOportunidades] Tipo desconhecido: "${tipo}" — vaga será ignorada`);
-    return null;
-  }
-  return resultado;
+  // Match exato primeiro, depois por prefixo (ex: "PAIP 2026" → "PAIP")
+  if (map[t]) return map[t];
+  const chave = Object.keys(map).find((k) => t.startsWith(k));
+  if (chave) return map[chave];
+
+  console.warn(`[useOportunidades] Tipo desconhecido: "${tipo}" — vaga ignorada`);
+  return null;
 }
 
 function tagsDoTipo(tipo: string): string[] {
   const t = normalizarTipo(tipo);
-
   if (t.includes("EXTEN")) return ["Extensão", "Graduação"];
 
   const map: Record<string, string[]> = {
@@ -124,12 +143,13 @@ function tagsDoTipo(tipo: string): string[] {
     PPCA:                ["Pós-graduação", "Pesquisa"],
   };
 
-  return map[t] ?? [tipo];
+  const chave = Object.keys(map).find((k) => t.startsWith(k));
+  return chave ? map[chave] : [tipo];
 }
 
 function mapearOportunidade(o: OportunidadeAPI): VagaMapeada | null {
   const programa = normalizarPrograma(o.tipo);
-  if (!programa) return null; // descarta tipos desconhecidos em vez de jogar em PID
+  if (!programa) return null;
 
   const remuneracaoNum =
     typeof o.remuneracao === "string" ? parseFloat(o.remuneracao) : o.remuneracao;
@@ -156,10 +176,64 @@ function mapearOportunidade(o: OportunidadeAPI): VagaMapeada | null {
   };
 }
 
+// ─── programa → string que o backend aceita no campo `tipo` ─────────────────
+export const PROGRAMA_PARA_TIPO: Partial<Record<Programa, string>> = {
+  PAIP:     "PAIP",
+  PID:      "PID",
+  PIBIC:    "PIBIC",
+  "P&D":    "P&D",
+  PET:      "PET",
+  "PET-SI": "PET-SI",
+  PPCA:     "PPCA",
+  Extensão: "Extensão",
+};
+
+// ─── API ─────────────────────────────────────────────────────────────────────
+
 const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-export function useOportunidades() {
+function buildUrl(params: OportunidadesParams): string {
+  const qs = new URLSearchParams();
+  if (params.page)           qs.set("page",   String(params.page));
+  if (params.size)           qs.set("size",   String(params.size));
+  if (params.busca?.trim())  qs.set("busca",  params.busca.trim());
+  if (params.origem?.trim()) qs.set("origem", params.origem.trim());
+  if (params.tipo?.trim())   qs.set("tipo",   params.tipo.trim());
+  const str = qs.toString();
+  return `${API_BASE}/oportunidades${str ? `?${str}` : ""}`;
+}
+
+// ─── hook ────────────────────────────────────────────────────────────────────
+
+export interface UseOportunidadesReturn {
+  vagas: VagaMapeada[];
+  meta: PaginationMeta;
+  loading: boolean;
+  error: string | null;
+  setVagas: React.Dispatch<React.SetStateAction<VagaMapeada[]>>;
+  toggleSalvo: (id: number) => void;
+  goToPage: (page: number) => void;
+  setParams: (partial: Partial<Omit<OportunidadesParams, "page">>) => void;
+}
+
+const DEFAULT_META: PaginationMeta = {
+  total_elements: 0,
+  total_pages: 1,
+  current_page: 1,
+  size: 20,
+  has_next: false,
+  has_previous: false,
+};
+
+export function useOportunidades(): UseOportunidadesReturn {
+  // params guardado em ref para não causar re-fetch ao ser passado como dep
+  const [params, setParamsState] = useState<OportunidadesParams>({
+    page: 1,
+    size: 20,
+  });
+
   const [vagas, setVagas] = useState<VagaMapeada[]>([]);
+  const [meta, setMeta] = useState<PaginationMeta>(DEFAULT_META);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -171,7 +245,7 @@ export function useOportunidades() {
         setLoading(true);
         setError(null);
 
-        const res = await fetch(`${API_BASE}/oportunidades`, {
+        const res = await fetch(buildUrl(params), {
           headers: { "Content-Type": "application/json" },
         });
 
@@ -180,12 +254,27 @@ export function useOportunidades() {
           throw new Error(err.detail ?? `Erro ${res.status}`);
         }
 
-        const data: OportunidadeAPI[] = await res.json();
+        const json = await res.json();
+
+        const raw: OportunidadeAPI[] = Array.isArray(json) ? json : (json.data ?? []);
+        const metaApi: PaginationMeta | undefined = json.meta;
+
         if (!cancelled) {
-          const mapeadas = data
+          const mapeadas = raw
             .map(mapearOportunidade)
-            .filter((v): v is VagaMapeada => v !== null); // remove tipos desconhecidos
+            .filter((v): v is VagaMapeada => v !== null);
+
           setVagas(mapeadas);
+          if (metaApi) {
+            setMeta(metaApi);
+          } else {
+            setMeta({
+              ...DEFAULT_META,
+              total_elements: mapeadas.length,
+              current_page: params.page ?? 1,
+              size: params.size ?? 20,
+            });
+          }
         }
       } catch (e) {
         if (!cancelled)
@@ -197,7 +286,26 @@ export function useOportunidades() {
 
     fetchOportunidades();
     return () => { cancelled = true; };
+  }, [params]);
+
+  const goToPage = useCallback((page: number) => {
+    setParamsState((prev) => ({ ...prev, page }));
   }, []);
+
+  const setParams = useCallback(
+    (partial: Partial<Omit<OportunidadesParams, "page">>) => {
+      setParamsState((prev) => {
+        const next = { ...prev, ...partial, page: 1 };
+        if (
+          next.busca   === prev.busca &&
+          next.tipo    === prev.tipo  &&
+          next.origem  === prev.origem
+        ) return prev; // mesmos valores → não troca referência → não re-fetcha
+        return next;
+      });
+    },
+    [] // setParamsState é estável, [] é seguro aqui
+  );
 
   function toggleSalvo(id: number) {
     setVagas((prev) =>
@@ -205,5 +313,5 @@ export function useOportunidades() {
     );
   }
 
-  return { vagas, setVagas, toggleSalvo, loading, error };
+  return { vagas, setVagas, toggleSalvo, loading, error, meta, goToPage, setParams };
 }

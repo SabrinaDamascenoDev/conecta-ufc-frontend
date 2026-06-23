@@ -6,7 +6,7 @@ export type Programa =
   | "PET"
   | "PET-SI"
   | "PPCA"
-  | "Extenção";
+  | "Extensão";
 
 export interface Vaga {
   id: number;

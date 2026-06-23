@@ -4,7 +4,7 @@ import { EditarPerfil } from "../components/Dialogs/EditarPeril";
 import { Button } from "@/components/ui/button";
 import { Mail, SquarePen } from "lucide-react";
 
-const alertasAtivos = ["PAIP", "PID", "PIBIC", "Extenção"];
+const alertasAtivos = ["PAIP", "PID", "PIBIC", "Extensão"];
 
 export function Perfil() {
   return (

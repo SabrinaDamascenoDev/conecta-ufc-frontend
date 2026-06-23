@@ -12,7 +12,7 @@ const OPTIONS: FilterOption[] = [
   "PET",
   "PET-SI",
   "PPCA",
-  "Extenção",
+  "Extensão",
 ];
 
 interface ProgramaFilterProps {
