@@ -1,6 +1,7 @@
+// src/hooks/useOportunidades.ts
 import { useState, useEffect, useCallback } from "react";
 import { fetchOportunidades } from "@/services/vagasService";
-import { getFavoritos } from "@/services/vagasFavoritasService";
+import { useFavoritos } from "@/context/FavoritosContext";
 
 export type Programa = "PAIP" | "PID" | "PIBIC" | "P&D" | "PET" | "PET-SI" | "PPCA" | "Extensão";
 
@@ -63,6 +64,8 @@ export interface OportunidadesParams {
   tipo?: string;
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 function diasRestantes(dataFim: string): number {
   const fim = new Date(dataFim);
   const hoje = new Date();
@@ -94,13 +97,14 @@ function formatarValor(remuneracao: number | string): string {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+// ─── Mapeamento ───────────────────────────────────────────────────────────────
+
 function normalizarTipo(tipo: string): string {
   return tipo.toUpperCase().trim().replace(/\s+/g, " ");
 }
 
 function normalizarPrograma(tipo: string): Programa | null {
   const t = normalizarTipo(tipo);
-
   if (t.includes("EXTEN")) return "Extensão";
 
   const map: Record<string, Programa> = {
@@ -193,7 +197,6 @@ export interface UseOportunidadesReturn {
   loading: boolean;
   error: string | null;
   setVagas: React.Dispatch<React.SetStateAction<VagaMapeada[]>>;
-  toggleSalvo: (id: number) => void;
   goToPage: (page: number) => void;
   setParams: (partial: Partial<Omit<OportunidadesParams, "page">>) => void;
 }
@@ -208,6 +211,8 @@ const DEFAULT_META: PaginationMeta = {
 };
 
 export function useOportunidades(): UseOportunidadesReturn {
+  const { favoritosIds } = useFavoritos();
+
   const [params, setParamsState] = useState<OportunidadesParams>({
     page: 1,
     size: 20,
@@ -217,14 +222,6 @@ export function useOportunidades(): UseOportunidadesReturn {
   const [meta, setMeta] = useState<PaginationMeta>(DEFAULT_META);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const [favoritosIds, setFavoritosIds] = useState<Set<number>>(new Set());
-
-  useEffect(() => {
-    getFavoritos()
-      .then((lista) => setFavoritosIds(new Set(lista.map((o) => o.id))))
-      .catch(() => {/* silencioso */});
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -283,17 +280,5 @@ export function useOportunidades(): UseOportunidadesReturn {
     []
   );
 
-  function toggleSalvo(id: number) {
-    setVagas((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v))
-    );
-    setFavoritosIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  return { vagas, setVagas, toggleSalvo, loading, error, meta, goToPage, setParams };
+  return { vagas, setVagas, loading, error, meta, goToPage, setParams };
 }

@@ -1,3 +1,4 @@
+// src/pages/Vagas.tsx
 import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { SearchBar } from "../components/Search";
@@ -11,10 +12,7 @@ import {
   type Programa,
   PROGRAMA_PARA_TIPO,
 } from "@/hooks/useOportunidades";
-import {
-  favoritarVaga,
-  desfavoritarVaga,
-} from "@/services/vagasFavoritasService";
+import { useFavoritos } from "@/context/FavoritosContext";
 import Sair from "../components/Dialogs/Sair";
 import notFound from "@/assets/not-found.svg";
 import { useNavigate } from "react-router-dom";
@@ -44,10 +42,8 @@ export function Vagas() {
   });
 
   const debouncedSearch = useDebounce(search, 400);
-
-  const { vagas, setVagas, loading, error, meta, goToPage, setParams } =
-    useOportunidades();
-
+  const { toggleFavorito } = useFavoritos();
+  const { vagas, loading, error, meta, goToPage, setParams } = useOportunidades();
 
   useEffect(() => {
     const tipo: string | undefined = (() => {
@@ -68,34 +64,9 @@ export function Vagas() {
     });
   }, [debouncedSearch, filtro, advancedFilters.programas, advancedFilters.origem]);
 
-
   const handleSave = useCallback(async (id: number) => {
-    let estadoAnterior: boolean | null = null;
-
-    setVagas((prev) => {
-      const vaga = prev.find((v) => v.id === id);
-      if (!vaga) return prev;
-      estadoAnterior = vaga.salvo;
-      return prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v));
-    });
-
-    try {
-      if (estadoAnterior === false) {
-        await favoritarVaga({ oportunidade_id: id });
-      } else {
-        await desfavoritarVaga({ oportunidade_id: id });
-      }
-    } catch (e) {
-      setVagas((prev) =>
-        prev.map((v) =>
-          v.id === id && estadoAnterior !== null
-            ? { ...v, salvo: estadoAnterior as boolean }
-            : v
-        )
-      );
-      console.error("Erro ao atualizar favorito:", e);
-    }
-  }, [setVagas]);
+    await toggleFavorito(id);
+  }, [toggleFavorito]);
 
   const vagasOrdenadas = [...vagas].sort((a, b) => {
     switch (sort) {

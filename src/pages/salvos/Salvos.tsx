@@ -1,3 +1,4 @@
+// src/pages/Salvos.tsx
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sidebar } from "../components/Sidebar";
@@ -8,16 +9,12 @@ import { SortDropdown } from "../components/SortDropdown";
 import Sair from "../components/Dialogs/Sair";
 import type { AdvancedFilters } from "../components/FilterSheet";
 import notFound from "@/assets/not-found.svg";
-import {
-  getFavoritos,
-  favoritarVaga,
-  desfavoritarVaga,
-} from "@/services/vagasFavoritasService";
+import { getFavoritos } from "@/services/vagasFavoritasService";
 import { mapearOportunidade, type VagaMapeada, type Programa } from "@/hooks/useOportunidades";
+import { useFavoritos } from "@/context/FavoritosContext";
 
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
-
 
 function parseValor(valor: string): number {
   return parseInt(valor.replace(/\D/g, ""), 10) || 0;
@@ -47,6 +44,7 @@ function matchPrazo(encerraEm: number, prazos: string[]): boolean {
 
 export function Salvos() {
   const navigate = useNavigate();
+  const { favoritosIds, toggleFavorito } = useFavoritos();
 
   const [vagas, setVagas] = useState<VagaMapeada[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,12 +55,11 @@ export function Salvos() {
   const [sort, setSort] = useState<SortValue>("recentes");
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
     programas: [],
-    tags: [],
+    origem: [],
     valor: [],
     prazo: [],
   });
 
- 
   useEffect(() => {
     let cancelled = false;
 
@@ -92,38 +89,13 @@ export function Salvos() {
     return () => { cancelled = true; };
   }, []);
 
-
   const handleSave = useCallback(async (id: number) => {
-    let estadoAnterior: boolean | null = null;
-
-    setVagas((prev) => {
-      const vaga = prev.find((v) => v.id === id);
-      if (!vaga) return prev;
-      estadoAnterior = vaga.salvo;
-      return prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v));
-    });
-
-    try {
-      if (estadoAnterior === false) {
-        await favoritarVaga({ oportunidade_id: id });
-      } else {
-        await desfavoritarVaga({ oportunidade_id: id });
-      }
-    } catch (e) {
-
-      setVagas((prev) =>
-        prev.map((v) =>
-          v.id === id && estadoAnterior !== null
-            ? { ...v, salvo: estadoAnterior as boolean }
-            : v
-        )
-      );
-      console.error("Erro ao atualizar favorito:", e);
-    }
-  }, []);
+    await toggleFavorito(id);
+  }, [toggleFavorito]);
 
   const vagasFiltradas = useMemo(() => {
-    let result = vagas.filter((v) => v.salvo);
+    // Usa favoritosIds do contexto como fonte de verdade
+    let result = vagas.filter((v) => favoritosIds.has(v.id));
 
     if (filtro !== "Todas") {
       result = result.filter((v) => v.programa === filtro);
@@ -143,12 +115,6 @@ export function Salvos() {
     if (advancedFilters.programas.length > 0) {
       result = result.filter((v) =>
         advancedFilters.programas.includes(v.programa)
-      );
-    }
-
-    if (advancedFilters.tags.length > 0) {
-      result = result.filter((v) =>
-        advancedFilters.tags.some((tag) => v.tags.includes(tag))
       );
     }
 
@@ -173,11 +139,7 @@ export function Salvos() {
         default:         return 0;
       }
     });
-  }, [vagas, filtro, search, sort, advancedFilters]);
-
-  function handleSaberMais(id: number) {
-    navigate(`/vagas/${id}`);
-  }
+  }, [vagas, favoritosIds, filtro, search, sort, advancedFilters]);
 
   return (
     <div className="flex min-h-screen bg-white font-sans">
@@ -233,9 +195,9 @@ export function Salvos() {
               {vagasFiltradas.map((vaga) => (
                 <VagaCard
                   key={vaga.id}
-                  vaga={vaga}
+                  vaga={{ ...vaga, salvo: favoritosIds.has(vaga.id) }}
                   onSave={handleSave}
-                  onSaberMais={handleSaberMais}
+                  onSaberMais={(id) => navigate(`/vagas/${id}`)}
                 />
               ))}
             </div>
