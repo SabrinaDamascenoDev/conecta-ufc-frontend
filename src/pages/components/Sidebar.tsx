@@ -1,8 +1,10 @@
-import { useState } from "react";
-import { Bookmark, Bell, LayoutList, LogOut, Menu, X, Newspaper } from "lucide-react";
+// src/components/Sidebar/index.tsx
+import { useState, useEffect } from "react";
+import { Bookmark, Bell, Menu, X, Newspaper } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import logo from "../../assets/logo.png";
+import { getUsuario, type Usuario } from "@/services/usuarioService";
 
 type NavItem = "vagas" | "salvos" | "alertas" | "perfil";
 
@@ -16,17 +18,36 @@ const navItems = [
   { id: "alertas" as NavItem, label: "Alertas", icon: Bell },
 ];
 
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join("");
+}
+
 export function Sidebar({ alertasCount = 0 }: SidebarProps) {
   const [open, setOpen] = useState(false);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+
   const navigate = useNavigate();
   const location = useLocation();
-
   const activeItem = (location.pathname.replace("/", "") || "vagas") as NavItem;
+
+  useEffect(() => {
+    getUsuario()
+      .then(setUsuario)
+      .catch(() => {});
+  }, []);
 
   function handleNavigate(item: NavItem) {
     navigate(`/${item}`);
     setOpen(false);
   }
+
+  const nomeExibido = usuario?.preferred_username ?? usuario?.email ?? "Usuário";
+  const iniciais = getInitials(nomeExibido);
 
   return (
     <>
@@ -106,13 +127,16 @@ export function Sidebar({ alertasCount = 0 }: SidebarProps) {
 
         <div className="px-3 pb-6">
           <div className="mx-0 h-px bg-white/20 mb-4" />
-          <button className="flex items-center gap-3 cursor-pointer px-3 py-2 rounded-lg hover:bg-white/10 transition-colors" onClick={() => navigate('/perfil')}>
+          <button
+            className="flex items-center gap-3 cursor-pointer px-3 py-2 rounded-lg hover:bg-white/10 transition-colors w-full"
+            onClick={() => navigate("/perfil")}
+          >
             <div className="w-8 h-8 rounded-full bg-[#5b8de8] flex items-center justify-center text-xs font-bold text-white shrink-0">
-              SD
+              {iniciais || "?"}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-white truncate">Sabrina Damasceno</p>
-              <p className="text-xs text-white/60 truncate">Sistemas de informação</p>
+              <p className="text-sm font-semibold text-white truncate">{nomeExibido}</p>
+              <p className="text-xs text-white/60 truncate">sistemas de Infromação</p>
             </div>
           </button>
         </div>

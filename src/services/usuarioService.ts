@@ -10,7 +10,7 @@ export interface Usuario {
 
 
 export async function getUsuario(): Promise<Usuario> {
-    const response = await fetch(`${API_BASE}/usuario/me`, {
+    const response = await fetch(`${API_BASE}/usuarios/me`, {
         headers: {"Content-Type": "application/json", ...loginService.getAuthHeader() },
     });
 
