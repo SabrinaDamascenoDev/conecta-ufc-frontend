@@ -1,5 +1,5 @@
 // src/hooks/useOportunidades.ts
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchOportunidades } from "@/services/vagasService";
 import { useFavoritos } from "@/context/FavoritosContext";
 
@@ -62,6 +62,8 @@ export interface OportunidadesParams {
   busca?: string;
   origem?: string;
   tipo?: string;
+  remuneracao_min?: number;
+  remuneracao_max?: number;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -223,6 +225,13 @@ export function useOportunidades(): UseOportunidadesReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Ref sempre atualizado — permite que o fetch leia os ids sem ser dependência
+  const favoritosIdsRef = useRef(favoritosIds);
+  useEffect(() => {
+    favoritosIdsRef.current = favoritosIds;
+  }, [favoritosIds]);
+
+  // ─── Effect 1: fetch — NÃO depende de favoritosIds ───────────────────────
   useEffect(() => {
     let cancelled = false;
 
@@ -237,7 +246,7 @@ export function useOportunidades(): UseOportunidadesReturn {
           const mapeadas = raw
             .map(mapearOportunidade)
             .filter((v): v is VagaMapeada => v !== null)
-            .map((v) => ({ ...v, salvo: favoritosIds.has(v.id) }));
+            .map((v) => ({ ...v, salvo: favoritosIdsRef.current.has(v.id) }));
 
           setVagas(mapeadas);
           setMeta(
@@ -259,7 +268,14 @@ export function useOportunidades(): UseOportunidadesReturn {
 
     load();
     return () => { cancelled = true; };
-  }, [params, favoritosIds]);
+  }, [params]); // ← apenas params, sem favoritosIds
+
+  // ─── Effect 2: sincroniza campo `salvo` sem re-fetchar ───────────────────
+  useEffect(() => {
+    setVagas((prev) =>
+      prev.map((v) => ({ ...v, salvo: favoritosIds.has(v.id) }))
+    );
+  }, [favoritosIds]);
 
   const goToPage = useCallback((page: number) => {
     setParamsState((prev) => ({ ...prev, page }));
@@ -272,7 +288,9 @@ export function useOportunidades(): UseOportunidadesReturn {
         if (
           next.busca === prev.busca &&
           next.tipo === prev.tipo &&
-          next.origem === prev.origem
+          next.origem === prev.origem &&
+          next.remuneracao_min === prev.remuneracao_min &&
+          next.remuneracao_max === prev.remuneracao_max
         ) return prev;
         return next;
       });

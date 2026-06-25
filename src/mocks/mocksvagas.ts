@@ -9,6 +9,7 @@ export type Programa =
   | "Extensão";
 
 export interface Vaga {
+  dataCriacao: any;
   id: number;
   titulo: string;
   programa: Programa;

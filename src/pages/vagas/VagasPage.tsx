@@ -30,6 +30,37 @@ function useDebounce<T>(value: T, delay = 400): T {
   return debounced;
 }
 
+const FAIXA_PARA_REMUNERACAO: Record<string, { min?: number; max?: number }> = {
+  "Até R$ 500": { max: 500 },
+  "R$ 501–R$ 700": { min: 501, max: 700 },
+  "R$ 701–R$ 900": { min: 701, max: 900 },
+  "Acima de R$ 900": { min: 901 },
+};
+
+
+function resolveRemuneracao(faixas: string[]): {
+  remuneracao_min?: number;
+  remuneracao_max?: number;
+} {
+  if (faixas.length === 0) return {};
+
+  const mins = faixas
+    .map((f) => FAIXA_PARA_REMUNERACAO[f]?.min)
+    .filter((v): v is number => v != null);
+
+  const maxs = faixas
+    .map((f) => FAIXA_PARA_REMUNERACAO[f]?.max)
+    .filter((v): v is number => v != null);
+
+  const hasOpenEnd = faixas.some((f) => FAIXA_PARA_REMUNERACAO[f]?.max == null);
+
+  return {
+    remuneracao_min: mins.length > 0 ? Math.min(...mins) : undefined,
+    remuneracao_max:
+      !hasOpenEnd && maxs.length > 0 ? Math.max(...maxs) : undefined,
+  };
+}
+
 export function Vagas() {
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<FilterOption>("Todas");
@@ -43,9 +74,12 @@ export function Vagas() {
 
   const debouncedSearch = useDebounce(search, 400);
   const { toggleFavorito } = useFavoritos();
-  const { vagas, loading, error, meta, goToPage, setParams } = useOportunidades();
+  const { vagas, loading, error, meta, goToPage, setParams } =
+    useOportunidades();
 
   useEffect(() => {
+    console.log("FILTROS", advancedFilters);
+
     const tipo: string | undefined = (() => {
       if (advancedFilters.programas.length === 1)
         return PROGRAMA_PARA_TIPO[advancedFilters.programas[0]] ?? undefined;
@@ -55,26 +89,56 @@ export function Vagas() {
     })();
 
     const origem =
-      advancedFilters.origem.length === 1 ? advancedFilters.origem[0] : undefined;
+      advancedFilters.origem.length === 1
+        ? advancedFilters.origem[0]
+        : undefined;
+
+    console.log("FILTROS", advancedFilters);
+
+    const { remuneracao_min, remuneracao_max } = resolveRemuneracao(
+      advancedFilters.valor,
+    );
+
+    console.log("REMUNERACAO", remuneracao_min, remuneracao_max);
+
+    console.log("REMUNERAÇÃO", {
+      remuneracao_min,
+      remuneracao_max,
+    });
 
     setParams({
       busca: debouncedSearch || undefined,
       tipo,
       origem,
+      remuneracao_min,
+      remuneracao_max,
     });
-  }, [debouncedSearch, filtro, advancedFilters.programas, advancedFilters.origem]);
-
-  const handleSave = useCallback(async (id: number) => {
-    await toggleFavorito(id);
-  }, [toggleFavorito]);
+  }, [
+    debouncedSearch,
+    filtro,
+    advancedFilters.programas,
+    advancedFilters.origem,
+    advancedFilters.valor,
+  ]);
+  const handleSave = useCallback(
+    async (id: number) => {
+      await toggleFavorito(id);
+    },
+    [toggleFavorito],
+  );
 
   const vagasOrdenadas = [...vagas].sort((a, b) => {
     switch (sort) {
-      case "recentes": return a.dataCriacao.getTime() - b.dataCriacao.getTime();
-      case "antigas":  return b.dataCriacao.getTime() - a.dataCriacao.getTime();
-      case "az":       return a.titulo.localeCompare(b.titulo, "pt-BR");
-      case "za":       return b.titulo.localeCompare(a.titulo, "pt-BR");
-      default:         return 0;
+      case "recentes":
+        return a.dataCriacao.getTime() - b.dataCriacao.getTime();
+      case "antigas":
+        return b.dataCriacao.getTime() - a.dataCriacao.getTime();
+      case "az":
+        return a.titulo.localeCompare(b.titulo, "pt-BR");
+      case "za":
+        return b.titulo.localeCompare(a.titulo, "pt-BR");
+      default:
+        return 0;
     }
   });
 
@@ -133,19 +197,26 @@ export function Vagas() {
                 </>
               )}
             </p>
-            <SortDropdown value={sort} onChange={(v) => setSort(v as SortValue)} />
+            <SortDropdown
+              value={sort}
+              onChange={(v) => setSort(v as SortValue)}
+            />
           </div>
 
           {error && !loading && (
             <div className="rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm px-5 py-4">
-              Não foi possível carregar as oportunidades: <strong>{error}</strong>
+              Não foi possível carregar as oportunidades:{" "}
+              <strong>{error}</strong>
             </div>
           )}
 
           {loading && (
             <div className="flex flex-col gap-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-[#F2F2F2] rounded-2xl px-6 py-5 animate-pulse h-36" />
+                <div
+                  key={i}
+                  className="bg-[#F2F2F2] rounded-2xl px-6 py-5 animate-pulse h-36"
+                />
               ))}
             </div>
           )}
@@ -165,14 +236,26 @@ export function Vagas() {
 
           {!loading && !error && vagasOrdenadas.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-              <img src={notFound} alt="Nenhuma vaga encontrada" className="w-80 md:w-96 mb-8 opacity-80" />
-              <p className="text-2xl font-bold text-black">Nenhuma vaga encontrada</p>
-              <p className="text-base mt-2 text-gray-500">Tente ajustar os filtros ou a busca</p>
+              <img
+                src={notFound}
+                alt="Nenhuma vaga encontrada"
+                className="w-80 md:w-96 mb-8 opacity-80"
+              />
+              <p className="text-2xl font-bold text-black">
+                Nenhuma vaga encontrada
+              </p>
+              <p className="text-base mt-2 text-gray-500">
+                Tente ajustar os filtros ou a busca
+              </p>
             </div>
           )}
 
           {!error && (
-            <Pagination meta={meta} onPageChange={goToPage} disabled={loading} />
+            <Pagination
+              meta={meta}
+              onPageChange={goToPage}
+              disabled={loading}
+            />
           )}
         </div>
       </main>
