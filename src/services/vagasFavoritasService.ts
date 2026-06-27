@@ -44,7 +44,7 @@ export async function getFavoritos(params: OportunidadesParams = {}): Promise<Fa
   if (params.origem) query.set("origem", params.origem);
   if (params.tipo) query.set("tipo", params.tipo);
 
-  // NOVO
+
   if (params.remuneracao_min != null)
     query.set("remuneracao_min", String(params.remuneracao_min));
 
@@ -57,5 +57,5 @@ export async function getFavoritos(params: OportunidadesParams = {}): Promise<Fa
 
   if (!response.ok) return handleError(response, "Erro ao buscar os favoritos");
 
-  return response.json(); // { data: [...], meta: {...} }
+  return response.json(); 
 }
