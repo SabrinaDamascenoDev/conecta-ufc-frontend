@@ -14,6 +14,7 @@ import Sair from "../components/Dialogs/Sair";
 import notFound from "@/assets/not-found.svg";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { getUsuario, type Usuario } from "@/services/usuarioService";
 
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
@@ -57,10 +58,20 @@ function resolveRemuneracao(faixas: string[]): {
   };
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join("");
+}
+
 export function Alertas() {
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<FilterOption>("Todas");
   const [sort, setSort] = useState<SortValue>("recentes");
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
     programas: [],
     origem: [],
@@ -70,8 +81,7 @@ export function Alertas() {
 
   const debouncedSearch = useDebounce(search, 400);
   const { toggleFavorito } = useFavoritos();
-  
-  // Usando a mesma estrutura do Vagas, mas com o hook de Alertas
+
   const { vagas, loading, error, meta, goToPage, setParams } = useAlertas();
 
   useEffect(() => {
@@ -105,7 +115,7 @@ export function Alertas() {
     advancedFilters.programas,
     advancedFilters.origem,
     advancedFilters.valor,
-    setParams
+    setParams,
   ]);
 
   const handleSave = useCallback(
@@ -115,12 +125,10 @@ export function Alertas() {
     [toggleFavorito],
   );
 
- const vagasOrdenadas = [...vagas].sort((a, b) => {
-    // Validação extra para a data não ser undefined
+  const vagasOrdenadas = [...vagas].sort((a, b) => {
     const dateA = a.dataCriacao instanceof Date ? a.dataCriacao.getTime() : 0;
     const dateB = b.dataCriacao instanceof Date ? b.dataCriacao.getTime() : 0;
-    
-    // Validação extra pro titulo não ser undefined e dar erro no localeCompare
+
     const tituloA = a.titulo || "";
     const tituloB = b.titulo || "";
 
@@ -138,6 +146,15 @@ export function Alertas() {
     }
   });
 
+  useEffect(() => {
+    getUsuario()
+      .then(setUsuario)
+      .catch(() => {});
+  }, []);
+  const nomeExibido =
+    usuario?.preferred_username ?? usuario?.email ?? "Usuário";
+  const iniciais = getInitials(nomeExibido);
+
   const navigate = useNavigate();
 
   function handleFiltroRapido(value: FilterOption) {
@@ -152,7 +169,7 @@ export function Alertas() {
 
   return (
     <div className="flex min-h-screen bg-white font-sans">
-      <Sidebar alertasCount={10} />
+      <Sidebar />
 
       <main className="flex flex-col flex-1 min-w-0 lg:pl-[262px]">
         <div className="flex items-center justify-between px-8 pt-7 pb-0 gap-4">
@@ -168,7 +185,7 @@ export function Alertas() {
               className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center cursor-pointer justify-center text-xs font-bold text-white"
               onClick={() => navigate("/perfil")}
             >
-              SD
+              {iniciais}
             </button>
             <Sair />
           </div>
@@ -201,8 +218,7 @@ export function Alertas() {
 
           {error && !loading && (
             <div className="rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm px-5 py-4">
-              Não foi possível carregar os alertas:{" "}
-              <strong>{error}</strong>
+              Não foi possível carregar os alertas: <strong>{error}</strong>
             </div>
           )}
 

@@ -1,4 +1,3 @@
-// src/pages/Vagas.tsx
 import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { SearchBar } from "../components/Search";
@@ -17,6 +16,7 @@ import Sair from "../components/Dialogs/Sair";
 import notFound from "@/assets/not-found.svg";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { getUsuario, type Usuario } from "@/services/usuarioService";
 
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
@@ -36,7 +36,6 @@ const FAIXA_PARA_REMUNERACAO: Record<string, { min?: number; max?: number }> = {
   "R$ 701–R$ 900": { min: 701, max: 900 },
   "Acima de R$ 900": { min: 901 },
 };
-
 
 function resolveRemuneracao(faixas: string[]): {
   remuneracao_min?: number;
@@ -61,10 +60,20 @@ function resolveRemuneracao(faixas: string[]): {
   };
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join("");
+}
+
 export function Vagas() {
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<FilterOption>("Todas");
   const [sort, setSort] = useState<SortValue>("recentes");
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
     programas: [],
     origem: [],
@@ -78,8 +87,6 @@ export function Vagas() {
     useOportunidades();
 
   useEffect(() => {
-    console.log("FILTROS", advancedFilters);
-
     const tipo: string | undefined = (() => {
       if (advancedFilters.programas.length === 1)
         return PROGRAMA_PARA_TIPO[advancedFilters.programas[0]] ?? undefined;
@@ -93,18 +100,9 @@ export function Vagas() {
         ? advancedFilters.origem[0]
         : undefined;
 
-    console.log("FILTROS", advancedFilters);
-
     const { remuneracao_min, remuneracao_max } = resolveRemuneracao(
       advancedFilters.valor,
     );
-
-    console.log("REMUNERACAO", remuneracao_min, remuneracao_max);
-
-    console.log("REMUNERAÇÃO", {
-      remuneracao_min,
-      remuneracao_max,
-    });
 
     setParams({
       busca: debouncedSearch || undefined,
@@ -126,6 +124,16 @@ export function Vagas() {
     },
     [toggleFavorito],
   );
+
+  useEffect(() => {
+    getUsuario()
+      .then(setUsuario)
+      .catch(() => {});
+  }, []);
+
+  const nomeExibido =
+    usuario?.preferred_username ?? usuario?.email ?? "Usuário";
+  const iniciais = getInitials(nomeExibido);
 
   const vagasOrdenadas = [...vagas].sort((a, b) => {
     switch (sort) {
@@ -156,7 +164,7 @@ export function Vagas() {
 
   return (
     <div className="flex min-h-screen bg-white font-sans">
-      <Sidebar alertasCount={10} />
+      <Sidebar />
 
       <main className="flex flex-col flex-1 min-w-0 lg:pl-[262px]">
         <div className="flex items-center justify-between px-8 pt-7 pb-0 gap-4">
@@ -172,7 +180,7 @@ export function Vagas() {
               className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center cursor-pointer justify-center text-xs font-bold text-white"
               onClick={() => navigate("/perfil")}
             >
-              SD
+              {iniciais}
             </button>
             <Sair />
           </div>

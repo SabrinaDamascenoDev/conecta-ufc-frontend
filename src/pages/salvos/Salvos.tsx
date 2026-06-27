@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
@@ -21,6 +20,7 @@ import {
   PROGRAMA_PARA_TIPO,
 } from "@/hooks/useOportunidades";
 import { useFavoritos } from "@/context/FavoritosContext";
+import { getUsuario, type Usuario } from "@/services/usuarioService";
 
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
@@ -43,10 +43,7 @@ const DEFAULT_META: PaginationMeta = {
   has_previous: false,
 };
 
-const FAIXA_PARA_REMUNERACAO: Record<
-  string,
-  { min?: number; max?: number }
-> = {
+const FAIXA_PARA_REMUNERACAO: Record<string, { min?: number; max?: number }> = {
   "Até R$ 500": { max: 500 },
   "R$ 501–R$ 700": { min: 501, max: 700 },
   "R$ 701–R$ 900": { min: 701, max: 900 },
@@ -67,15 +64,21 @@ function resolveRemuneracao(faixas: string[]): {
     .map((f) => FAIXA_PARA_REMUNERACAO[f]?.max)
     .filter((v): v is number => v != null);
 
-  const hasOpenEnd = faixas.some(
-    (f) => FAIXA_PARA_REMUNERACAO[f]?.max == null
-  );
+  const hasOpenEnd = faixas.some((f) => FAIXA_PARA_REMUNERACAO[f]?.max == null);
 
   return {
     remuneracao_min: mins.length ? Math.min(...mins) : undefined,
-    remuneracao_max:
-      !hasOpenEnd && maxs.length ? Math.max(...maxs) : undefined,
+    remuneracao_max: !hasOpenEnd && maxs.length ? Math.max(...maxs) : undefined,
   };
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join("");
 }
 
 export function Salvos() {
@@ -86,6 +89,7 @@ export function Salvos() {
   const [meta, setMeta] = useState<PaginationMeta>(DEFAULT_META);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
 
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<FilterOption>("Todas");
@@ -100,39 +104,36 @@ export function Salvos() {
 
   const debouncedSearch = useDebounce(search, 400);
 
-  // Monta os params server-side (mesmo padrão do Vagas.tsx)
- const serverParams: OportunidadesParams = (() => {
-  const tipo: string | undefined = (() => {
-    if (advancedFilters.programas.length === 1)
-      return PROGRAMA_PARA_TIPO[advancedFilters.programas[0]] ?? undefined;
+  const serverParams: OportunidadesParams = (() => {
+    const tipo: string | undefined = (() => {
+      if (advancedFilters.programas.length === 1)
+        return PROGRAMA_PARA_TIPO[advancedFilters.programas[0]] ?? undefined;
 
-    if (
-      advancedFilters.programas.length === 0 &&
-      filtro !== "Todas"
-    )
-      return PROGRAMA_PARA_TIPO[filtro] ?? undefined;
+      if (advancedFilters.programas.length === 0 && filtro !== "Todas")
+        return PROGRAMA_PARA_TIPO[filtro] ?? undefined;
 
-    return undefined;
+      return undefined;
+    })();
+
+    const origem =
+      advancedFilters.origem.length === 1
+        ? advancedFilters.origem[0]
+        : undefined;
+
+    const { remuneracao_min, remuneracao_max } = resolveRemuneracao(
+      advancedFilters.valor,
+    );
+
+    return {
+      page,
+      size: 20,
+      busca: debouncedSearch || undefined,
+      tipo,
+      origem,
+      remuneracao_min,
+      remuneracao_max,
+    };
   })();
-
-  const origem =
-    advancedFilters.origem.length === 1
-      ? advancedFilters.origem[0]
-      : undefined;
-
-  const { remuneracao_min, remuneracao_max } =
-    resolveRemuneracao(advancedFilters.valor);
-
-  return {
-    page,
-    size: 20,
-    busca: debouncedSearch || undefined,
-    tipo,
-    origem,
-    remuneracao_min,
-    remuneracao_max,
-  };
-})();
 
   useEffect(() => {
     let cancelled = false;
@@ -151,43 +152,54 @@ export function Salvos() {
           .map((v) => ({ ...v, salvo: true }));
 
         setVagas(mapeadas);
-        setMeta(metaApi ?? { ...DEFAULT_META, total_elements: mapeadas.length });
+        setMeta(
+          metaApi ?? { ...DEFAULT_META, total_elements: mapeadas.length },
+        );
       } catch (e) {
         if (!cancelled)
-          setError(e instanceof Error ? e.message : "Erro ao carregar favoritos");
+          setError(
+            e instanceof Error ? e.message : "Erro ao carregar favoritos",
+          );
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
     load();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+    };
   }, [debouncedSearch, filtro, advancedFilters, page]);
 
-  // Volta para p.1 sempre que filtros/busca mudam
   useEffect(() => {
     setPage(1);
   }, [debouncedSearch, filtro, advancedFilters]);
 
-  const handleSave = useCallback(async (id: number) => {
-    await toggleFavorito(id);
-    // Remove localmente para feedback imediato (igual ao contexto)
-    setVagas((prev) => prev.filter((v) => v.id !== id));
-    setMeta((prev) => ({
-      ...prev,
-      total_elements: Math.max(prev.total_elements - 1, 0),
-    }));
-  }, [toggleFavorito]);
+  const handleSave = useCallback(
+    async (id: number) => {
+      await toggleFavorito(id);
 
-  // Ordenação local (a API não expõe parâmetro de sort)
+      setVagas((prev) => prev.filter((v) => v.id !== id));
+      setMeta((prev) => ({
+        ...prev,
+        total_elements: Math.max(prev.total_elements - 1, 0),
+      }));
+    },
+    [toggleFavorito],
+  );
+
   const vagasOrdenadas = [...vagas].sort((a, b) => {
     switch (sort) {
-      case "recentes": return a.dataCriacao.getTime() - b.dataCriacao.getTime();
-      case "antigas":  return b.dataCriacao.getTime() - a.dataCriacao.getTime();
-      case "az":       return a.titulo.localeCompare(b.titulo, "pt-BR");
-      case "za":       return b.titulo.localeCompare(a.titulo, "pt-BR");
-      default:         return 0;
+      case "recentes":
+        return a.dataCriacao.getTime() - b.dataCriacao.getTime();
+      case "antigas":
+        return b.dataCriacao.getTime() - a.dataCriacao.getTime();
+      case "az":
+        return a.titulo.localeCompare(b.titulo, "pt-BR");
+      case "za":
+        return b.titulo.localeCompare(a.titulo, "pt-BR");
+      default:
+        return 0;
     }
   });
 
@@ -201,9 +213,18 @@ export function Salvos() {
     if (filters.programas.length > 0) setFiltro("Todas");
   }
 
+  useEffect(() => {
+    getUsuario()
+      .then(setUsuario)
+      .catch(() => {});
+  }, []);
+  const nomeExibido =
+    usuario?.preferred_username ?? usuario?.email ?? "Usuário";
+  const iniciais = getInitials(nomeExibido);
+
   return (
     <div className="flex min-h-screen bg-white font-sans">
-      <Sidebar alertasCount={10} />
+      <Sidebar />
 
       <main className="flex flex-col flex-1 min-w-0 lg:pl-[262px]">
         <div className="flex items-center justify-between px-8 pt-7 pb-0 gap-4">
@@ -219,7 +240,7 @@ export function Salvos() {
               className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center cursor-pointer justify-center text-xs font-bold text-white"
               onClick={() => navigate("/perfil")}
             >
-              SD
+              {iniciais}
             </button>
             <Sair />
           </div>
@@ -244,7 +265,10 @@ export function Salvos() {
                 </>
               )}
             </p>
-            <SortDropdown value={sort} onChange={(v) => setSort(v as SortValue)} />
+            <SortDropdown
+              value={sort}
+              onChange={(v) => setSort(v as SortValue)}
+            />
           </div>
 
           {error && !loading && (
@@ -284,7 +308,9 @@ export function Salvos() {
                 alt="Nenhuma vaga encontrada"
                 className="w-80 md:w-96 mb-8 opacity-80"
               />
-              <p className="text-2xl font-bold text-black">Nenhuma vaga encontrada</p>
+              <p className="text-2xl font-bold text-black">
+                Nenhuma vaga encontrada
+              </p>
               <p className="text-base mt-2 text-gray-500">
                 Tente ajustar os filtros ou a busca
               </p>
