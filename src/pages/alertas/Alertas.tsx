@@ -1,136 +1,183 @@
-import { useState, useMemo } from "react";
+// src/pages/Alertas.tsx
+import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { SearchBar } from "../components/Search";
 import { ProgramaFilter } from "../components/Filter";
 import { VagaCard } from "../components/VagaCard";
-import {
-  vagas as vagasInitial,
-  type Vaga,
-  type Programa,
-} from "@/mocks/mocksvagas";
-import Sair from "../components/Dialogs/Sair";
-import type { AdvancedFilters } from "../components/FilterSheet";
-import notFound from "@/assets/not-found.svg";
 import { SortDropdown } from "../components/SortDropdown";
+import { Pagination } from "../components/Pagination";
+import { type AdvancedFilters } from "../components/FilterSheet";
+import { type Programa, PROGRAMA_PARA_TIPO } from "@/hooks/useOportunidades";
+import { useAlertas } from "@/hooks/useAlertas"; // <-- AQUI ENTRA O NOVO HOOK
+import { useFavoritos } from "@/context/FavoritosContext";
+import Sair from "../components/Dialogs/Sair";
+import notFound from "@/assets/not-found.svg";
 import { useNavigate } from "react-router-dom";
+import { Loader2 } from "lucide-react";
+import { getUsuario, type Usuario } from "@/services/usuarioService";
 
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
 
-function parseValor(valor: string): number {
-  return parseInt(valor.replace(/\D/g, ""), 10) || 0;
+function useDebounce<T>(value: T, delay = 400): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return debounced;
 }
 
-function matchValor(valor: string, faixas: string[]): boolean {
-  if (faixas.length === 0) return true;
-  const n = parseValor(valor);
-  return faixas.some((f) => {
-    if (f === "Até R$ 500") return n <= 500;
-    if (f === "R$ 501–R$ 700") return n >= 501 && n <= 700;
-    if (f === "R$ 701–R$ 900") return n >= 701 && n <= 900;
-    if (f === "Acima de R$ 900") return n > 900;
-    return false;
-  });
+const FAIXA_PARA_REMUNERACAO: Record<string, { min?: number; max?: number }> = {
+  "Até R$ 500": { max: 500 },
+  "R$ 501–R$ 700": { min: 501, max: 700 },
+  "R$ 701–R$ 900": { min: 701, max: 900 },
+  "Acima de R$ 900": { min: 901 },
+};
+
+function resolveRemuneracao(faixas: string[]): {
+  remuneracao_min?: number;
+  remuneracao_max?: number;
+} {
+  if (faixas.length === 0) return {};
+
+  const mins = faixas
+    .map((f) => FAIXA_PARA_REMUNERACAO[f]?.min)
+    .filter((v): v is number => v != null);
+
+  const maxs = faixas
+    .map((f) => FAIXA_PARA_REMUNERACAO[f]?.max)
+    .filter((v): v is number => v != null);
+
+  const hasOpenEnd = faixas.some((f) => FAIXA_PARA_REMUNERACAO[f]?.max == null);
+
+  return {
+    remuneracao_min: mins.length > 0 ? Math.min(...mins) : undefined,
+    remuneracao_max:
+      !hasOpenEnd && maxs.length > 0 ? Math.max(...maxs) : undefined,
+  };
 }
 
-function matchPrazo(encerraEm: number, prazos: string[]): boolean {
-  if (prazos.length === 0) return true;
-  return prazos.some((p) => {
-    if (p === "Encerra em até 7 dias") return encerraEm <= 7;
-    if (p === "Encerra em até 15 dias") return encerraEm <= 15;
-    if (p === "Encerra em até 30 dias") return encerraEm <= 30;
-    return false;
-  });
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join("");
 }
 
 export function Alertas() {
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<FilterOption>("Todas");
   const [sort, setSort] = useState<SortValue>("recentes");
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
     programas: [],
-    tags: [],
+    origem: [],
     valor: [],
     prazo: [],
   });
-  const [vagas, setVagas] = useState<Vaga[]>(vagasInitial);
+
+  const debouncedSearch = useDebounce(search, 400);
+  const { toggleFavorito } = useFavoritos();
+
+  const { vagas, loading, error, meta, goToPage, setParams } = useAlertas();
+
+  useEffect(() => {
+    const tipo: string | undefined = (() => {
+      if (advancedFilters.programas.length === 1)
+        return PROGRAMA_PARA_TIPO[advancedFilters.programas[0]] ?? undefined;
+      if (advancedFilters.programas.length === 0 && filtro !== "Todas")
+        return PROGRAMA_PARA_TIPO[filtro] ?? undefined;
+      return undefined;
+    })();
+
+    const origem =
+      advancedFilters.origem.length === 1
+        ? advancedFilters.origem[0]
+        : undefined;
+
+    const { remuneracao_min, remuneracao_max } = resolveRemuneracao(
+      advancedFilters.valor,
+    );
+
+    setParams({
+      busca: debouncedSearch || undefined,
+      tipo,
+      origem,
+      remuneracao_min,
+      remuneracao_max,
+    });
+  }, [
+    debouncedSearch,
+    filtro,
+    advancedFilters.programas,
+    advancedFilters.origem,
+    advancedFilters.valor,
+    setParams,
+  ]);
+
+  const handleSave = useCallback(
+    async (id: number) => {
+      await toggleFavorito(id);
+    },
+    [toggleFavorito],
+  );
+
+  const vagasOrdenadas = [...vagas].sort((a, b) => {
+    const dateA = a.dataCriacao instanceof Date ? a.dataCriacao.getTime() : 0;
+    const dateB = b.dataCriacao instanceof Date ? b.dataCriacao.getTime() : 0;
+
+    const tituloA = a.titulo || "";
+    const tituloB = b.titulo || "";
+
+    switch (sort) {
+      case "recentes":
+        return dateA - dateB;
+      case "antigas":
+        return dateB - dateA;
+      case "az":
+        return tituloA.localeCompare(tituloB, "pt-BR");
+      case "za":
+        return tituloB.localeCompare(tituloA, "pt-BR");
+      default:
+        return 0;
+    }
+  });
+
+  useEffect(() => {
+    getUsuario()
+      .then(setUsuario)
+      .catch(() => {});
+  }, []);
+  const nomeExibido =
+    usuario?.preferred_username ?? usuario?.email ?? "Usuário";
+  const iniciais = getInitials(nomeExibido);
+
   const navigate = useNavigate();
 
-  const vagasFiltradas = useMemo(() => {
-    let result = vagas;
-    if (filtro !== "Todas") {
-      result = result.filter((v) => v.programa === filtro);
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (v) =>
-          v.titulo.toLowerCase().includes(q) ||
-          v.descricao.toLowerCase().includes(q) ||
-          v.coordenador.toLowerCase().includes(q) ||
-          v.tags.some((t) => t.toLowerCase().includes(q)),
-      );
-    }
-    if (advancedFilters.programas.length > 0) {
-      result = result.filter((v) =>
-        advancedFilters.programas.includes(v.programa),
-      );
-    }
-
-    if (advancedFilters.tags.length > 0) {
-      result = result.filter((v) =>
-        advancedFilters.tags.some((tag) => v.tags.includes(tag)),
-      );
-    }
-
-    if (advancedFilters.valor.length > 0) {
-      result = result.filter((v) => matchValor(v.valor, advancedFilters.valor));
-    }
-
-    if (advancedFilters.prazo.length > 0) {
-      result = result.filter((v) =>
-        matchPrazo(v.encerraEm, advancedFilters.prazo),
-      );
-    }
-
-    result = [...result].sort((a, b) => {
-      switch (sort) {
-        case "recentes":
-          return a.encerraEm - b.encerraEm;
-        case "antigas":
-          return b.encerraEm - a.encerraEm;
-        case "az":
-          return a.titulo.localeCompare(b.titulo, "pt-BR");
-        case "za":
-          return b.titulo.localeCompare(a.titulo, "pt-BR");
-        default:
-          return 0;
-      }
-    });
-
-    return result;
-  }, [vagas, filtro, search, sort, advancedFilters]);
-
-  function handleSave(id: number) {
-    setVagas((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v)),
-    );
+  function handleFiltroRapido(value: FilterOption) {
+    setFiltro(value);
+    setAdvancedFilters((prev) => ({ ...prev, programas: [] }));
   }
 
-  function handleSaberMais(id: number) {
-    alert(`Abrindo detalhes da vaga #${id}`);
+  function handleAdvancedFilters(filters: AdvancedFilters) {
+    setAdvancedFilters(filters);
+    if (filters.programas.length > 0) setFiltro("Todas");
   }
 
   return (
     <div className="flex min-h-screen bg-white font-sans">
-      <Sidebar alertasCount={10} />
+      <Sidebar />
+
       <main className="flex flex-col flex-1 min-w-0 lg:pl-[262px]">
         <div className="flex items-center justify-between px-8 pt-7 pb-0 gap-4">
           <div className="pl-10 lg:pl-0 flex-1">
             <SearchBar
               value={search}
               onChange={setSearch}
-              onApplyFilters={setAdvancedFilters}
+              onApplyFilters={handleAdvancedFilters}
             />
           </div>
           <div className="flex items-center gap-2 ml-auto">
@@ -138,52 +185,89 @@ export function Alertas() {
               className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center cursor-pointer justify-center text-xs font-bold text-white"
               onClick={() => navigate("/perfil")}
             >
-              SD
+              {iniciais}
             </button>
             <Sair />
           </div>
         </div>
+
         <div className="px-8 pt-6 pb-10 flex flex-col gap-5">
-          <ProgramaFilter selected={filtro} onChange={setFiltro} />
+          <ProgramaFilter selected={filtro} onChange={handleFiltroRapido} />
+
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-500">
-              <span className="text-foreground">{vagasFiltradas.length}</span>{" "}
-              {vagasFiltradas.length === 1
-                ? "oportunidade encontrada"
-                : "oportunidades encontradas"}
+              {loading ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 size={13} className="animate-spin" />
+                  Carregando alertas…
+                </span>
+              ) : (
+                <>
+                  <span className="text-foreground">{meta.total_elements}</span>{" "}
+                  {meta.total_elements === 1
+                    ? "alerta encontrado"
+                    : "alertas encontrados"}
+                </>
+              )}
             </p>
             <SortDropdown
               value={sort}
               onChange={(v) => setSort(v as SortValue)}
             />
           </div>
-          {vagasFiltradas.length > 0 ? (
+
+          {error && !loading && (
+            <div className="rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm px-5 py-4">
+              Não foi possível carregar os alertas: <strong>{error}</strong>
+            </div>
+          )}
+
+          {loading && (
             <div className="flex flex-col gap-4">
-              {vagasFiltradas.map((vaga) => (
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-[#F2F2F2] rounded-2xl px-6 py-5 animate-pulse h-36"
+                />
+              ))}
+            </div>
+          )}
+
+          {!loading && !error && vagasOrdenadas.length > 0 && (
+            <div className="flex flex-col gap-4">
+              {vagasOrdenadas.map((vaga) => (
                 <VagaCard
                   key={vaga.id}
                   vaga={vaga}
                   onSave={handleSave}
-                  onSaberMais={handleSaberMais}
+                  onSaberMais={(id) => navigate(`/vaga/${id}`)}
                 />
               ))}
             </div>
-          ) : (
+          )}
+
+          {!loading && !error && vagasOrdenadas.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full py-20 text-center">
               <img
                 src={notFound}
-                alt="Nenhuma vaga encontrada"
+                alt="Nenhum alerta encontrado"
                 className="w-80 md:w-96 mb-8 opacity-80"
               />
-
               <p className="text-2xl font-bold text-black">
-                Nenhuma vaga encontrada
+                Nenhum alerta encontrado
               </p>
-
               <p className="text-base mt-2 text-gray-500">
                 Tente ajustar os filtros ou a busca
               </p>
             </div>
+          )}
+
+          {!error && (
+            <Pagination
+              meta={meta}
+              onPageChange={goToPage}
+              disabled={loading}
+            />
           )}
         </div>
       </main>

@@ -11,14 +11,12 @@ import {
   type Programa,
   PROGRAMA_PARA_TIPO,
 } from "@/hooks/useOportunidades";
-import {
-  favoritarVaga,
-  desfavoritarVaga,
-} from "@/services/vagasFavoritasService";
+import { useFavoritos } from "@/context/FavoritosContext";
 import Sair from "../components/Dialogs/Sair";
 import notFound from "@/assets/not-found.svg";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
+import { getUsuario, type Usuario } from "@/services/usuarioService";
 
 type FilterOption = "Todas" | Programa;
 type SortValue = "recentes" | "antigas" | "az" | "za";
@@ -32,10 +30,50 @@ function useDebounce<T>(value: T, delay = 400): T {
   return debounced;
 }
 
+const FAIXA_PARA_REMUNERACAO: Record<string, { min?: number; max?: number }> = {
+  "Até R$ 500": { max: 500 },
+  "R$ 501–R$ 700": { min: 501, max: 700 },
+  "R$ 701–R$ 900": { min: 701, max: 900 },
+  "Acima de R$ 900": { min: 901 },
+};
+
+function resolveRemuneracao(faixas: string[]): {
+  remuneracao_min?: number;
+  remuneracao_max?: number;
+} {
+  if (faixas.length === 0) return {};
+
+  const mins = faixas
+    .map((f) => FAIXA_PARA_REMUNERACAO[f]?.min)
+    .filter((v): v is number => v != null);
+
+  const maxs = faixas
+    .map((f) => FAIXA_PARA_REMUNERACAO[f]?.max)
+    .filter((v): v is number => v != null);
+
+  const hasOpenEnd = faixas.some((f) => FAIXA_PARA_REMUNERACAO[f]?.max == null);
+
+  return {
+    remuneracao_min: mins.length > 0 ? Math.min(...mins) : undefined,
+    remuneracao_max:
+      !hasOpenEnd && maxs.length > 0 ? Math.max(...maxs) : undefined,
+  };
+}
+
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join("");
+}
+
 export function Vagas() {
   const [search, setSearch] = useState("");
   const [filtro, setFiltro] = useState<FilterOption>("Todas");
   const [sort, setSort] = useState<SortValue>("recentes");
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
     programas: [],
     origem: [],
@@ -44,10 +82,9 @@ export function Vagas() {
   });
 
   const debouncedSearch = useDebounce(search, 400);
-
-  const { vagas, setVagas, loading, error, meta, goToPage, setParams } =
+  const { toggleFavorito } = useFavoritos();
+  const { vagas, loading, error, meta, goToPage, setParams } =
     useOportunidades();
-
 
   useEffect(() => {
     const tipo: string | undefined = (() => {
@@ -59,51 +96,57 @@ export function Vagas() {
     })();
 
     const origem =
-      advancedFilters.origem.length === 1 ? advancedFilters.origem[0] : undefined;
+      advancedFilters.origem.length === 1
+        ? advancedFilters.origem[0]
+        : undefined;
+
+    const { remuneracao_min, remuneracao_max } = resolveRemuneracao(
+      advancedFilters.valor,
+    );
 
     setParams({
       busca: debouncedSearch || undefined,
       tipo,
       origem,
+      remuneracao_min,
+      remuneracao_max,
     });
-  }, [debouncedSearch, filtro, advancedFilters.programas, advancedFilters.origem]);
+  }, [
+    debouncedSearch,
+    filtro,
+    advancedFilters.programas,
+    advancedFilters.origem,
+    advancedFilters.valor,
+  ]);
+  const handleSave = useCallback(
+    async (id: number) => {
+      await toggleFavorito(id);
+    },
+    [toggleFavorito],
+  );
 
+  useEffect(() => {
+    getUsuario()
+      .then(setUsuario)
+      .catch(() => {});
+  }, []);
 
-  const handleSave = useCallback(async (id: number) => {
-    let estadoAnterior: boolean | null = null;
-
-    setVagas((prev) => {
-      const vaga = prev.find((v) => v.id === id);
-      if (!vaga) return prev;
-      estadoAnterior = vaga.salvo;
-      return prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v));
-    });
-
-    try {
-      if (estadoAnterior === false) {
-        await favoritarVaga({ oportunidade_id: id });
-      } else {
-        await desfavoritarVaga({ oportunidade_id: id });
-      }
-    } catch (e) {
-      setVagas((prev) =>
-        prev.map((v) =>
-          v.id === id && estadoAnterior !== null
-            ? { ...v, salvo: estadoAnterior as boolean }
-            : v
-        )
-      );
-      console.error("Erro ao atualizar favorito:", e);
-    }
-  }, [setVagas]);
+  const nomeExibido =
+    usuario?.preferred_username ?? usuario?.email ?? "Usuário";
+  const iniciais = getInitials(nomeExibido);
 
   const vagasOrdenadas = [...vagas].sort((a, b) => {
     switch (sort) {
-      case "recentes": return a.dataCriacao.getTime() - b.dataCriacao.getTime();
-      case "antigas":  return b.dataCriacao.getTime() - a.dataCriacao.getTime();
-      case "az":       return a.titulo.localeCompare(b.titulo, "pt-BR");
-      case "za":       return b.titulo.localeCompare(a.titulo, "pt-BR");
-      default:         return 0;
+      case "recentes":
+        return a.dataCriacao.getTime() - b.dataCriacao.getTime();
+      case "antigas":
+        return b.dataCriacao.getTime() - a.dataCriacao.getTime();
+      case "az":
+        return a.titulo.localeCompare(b.titulo, "pt-BR");
+      case "za":
+        return b.titulo.localeCompare(a.titulo, "pt-BR");
+      default:
+        return 0;
     }
   });
 
@@ -121,7 +164,7 @@ export function Vagas() {
 
   return (
     <div className="flex min-h-screen bg-white font-sans">
-      <Sidebar alertasCount={10} />
+      <Sidebar />
 
       <main className="flex flex-col flex-1 min-w-0 lg:pl-[262px]">
         <div className="flex items-center justify-between px-8 pt-7 pb-0 gap-4">
@@ -137,7 +180,7 @@ export function Vagas() {
               className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center cursor-pointer justify-center text-xs font-bold text-white"
               onClick={() => navigate("/perfil")}
             >
-              SD
+              {iniciais}
             </button>
             <Sair />
           </div>
@@ -162,19 +205,26 @@ export function Vagas() {
                 </>
               )}
             </p>
-            <SortDropdown value={sort} onChange={(v) => setSort(v as SortValue)} />
+            <SortDropdown
+              value={sort}
+              onChange={(v) => setSort(v as SortValue)}
+            />
           </div>
 
           {error && !loading && (
             <div className="rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm px-5 py-4">
-              Não foi possível carregar as oportunidades: <strong>{error}</strong>
+              Não foi possível carregar as oportunidades:{" "}
+              <strong>{error}</strong>
             </div>
           )}
 
           {loading && (
             <div className="flex flex-col gap-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-[#F2F2F2] rounded-2xl px-6 py-5 animate-pulse h-36" />
+                <div
+                  key={i}
+                  className="bg-[#F2F2F2] rounded-2xl px-6 py-5 animate-pulse h-36"
+                />
               ))}
             </div>
           )}
@@ -194,14 +244,26 @@ export function Vagas() {
 
           {!loading && !error && vagasOrdenadas.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full py-20 text-center">
-              <img src={notFound} alt="Nenhuma vaga encontrada" className="w-80 md:w-96 mb-8 opacity-80" />
-              <p className="text-2xl font-bold text-black">Nenhuma vaga encontrada</p>
-              <p className="text-base mt-2 text-gray-500">Tente ajustar os filtros ou a busca</p>
+              <img
+                src={notFound}
+                alt="Nenhuma vaga encontrada"
+                className="w-80 md:w-96 mb-8 opacity-80"
+              />
+              <p className="text-2xl font-bold text-black">
+                Nenhuma vaga encontrada
+              </p>
+              <p className="text-base mt-2 text-gray-500">
+                Tente ajustar os filtros ou a busca
+              </p>
             </div>
           )}
 
           {!error && (
-            <Pagination meta={meta} onPageChange={goToPage} disabled={loading} />
+            <Pagination
+              meta={meta}
+              onPageChange={goToPage}
+              disabled={loading}
+            />
           )}
         </div>
       </main>

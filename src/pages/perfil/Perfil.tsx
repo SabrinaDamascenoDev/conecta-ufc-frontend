@@ -3,10 +3,33 @@ import Sair from "../components/Dialogs/Sair";
 import { EditarPerfil } from "../components/Dialogs/EditarPeril";
 import { Button } from "@/components/ui/button";
 import { Mail, SquarePen } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getUsuario, type Usuario } from "@/services/usuarioService";
 
 const alertasAtivos = ["PAIP", "PID", "PIBIC", "Extensão"];
 
-export function Perfil() {
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join("");
+}
+
+export function Perfil() { 
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+
+  useEffect(() => {
+      getUsuario()
+        .then(setUsuario)
+        .catch(() => {});
+    }, []);
+
+    const name = usuario?.preferred_username ?? "Usuário";
+    const email = usuario?.email;
+    const iniciais = getInitials(name)
+
   return (
     <div className="flex min-h-screen bg-white font-sans w-full">
       <Sidebar alertasCount={10} />
@@ -14,7 +37,7 @@ export function Perfil() {
 
         <div className="flex items-center justify-end px-8 pt-7 pb-0 gap-2">
           <div className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center justify-center text-xs font-bold text-white">
-            SD
+            {iniciais}
           </div>
           <Sair />
         </div>
@@ -22,11 +45,11 @@ export function Perfil() {
         <div className="px-8 pt-8 pb-10 flex flex-col gap-8 ">
           <div className="flex items-center gap-6">
             <div className="w-30 h-30 rounded-full bg-[#5b8de8]/30 flex items-center justify-center text-3xl font-bold text-[#003f7f] shrink-0">
-              SD
+              {iniciais}
             </div>
             <div className="flex flex-col gap-1 flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">Sabrina Damasceno</h1>
-              <p className="text-sm text-gray-400">sabrinadamasceno@alu.ufc.br</p>
+              <h1 className="text-2xl font-bold text-gray-900">{name}</h1>
+              <p className="text-sm text-gray-400">{email}</p>
               <span className="mt-1 inline-flex items-center px-3 py-1 rounded-full bg-[#003f7f] text-white text-xs font-semibold w-fit">
                 Sistemas de Informação
               </span>

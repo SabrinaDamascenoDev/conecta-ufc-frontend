@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+// src/hooks/useOportunidades.ts
+import { useState, useEffect, useCallback, useRef } from "react";
 import { fetchOportunidades } from "@/services/vagasService";
-import { getFavoritos } from "@/services/vagasFavoritasService";
+import { useFavoritos } from "@/context/FavoritosContext";
 
 export type Programa = "PAIP" | "PID" | "PIBIC" | "P&D" | "PET" | "PET-SI" | "PPCA" | "Extensão";
 
@@ -61,7 +62,11 @@ export interface OportunidadesParams {
   busca?: string;
   origem?: string;
   tipo?: string;
+  remuneracao_min?: number;
+  remuneracao_max?: number;
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function diasRestantes(dataFim: string): number {
   const fim = new Date(dataFim);
@@ -94,13 +99,14 @@ function formatarValor(remuneracao: number | string): string {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+// ─── Mapeamento ───────────────────────────────────────────────────────────────
+
 function normalizarTipo(tipo: string): string {
   return tipo.toUpperCase().trim().replace(/\s+/g, " ");
 }
 
 function normalizarPrograma(tipo: string): Programa | null {
   const t = normalizarTipo(tipo);
-
   if (t.includes("EXTEN")) return "Extensão";
 
   const map: Record<string, Programa> = {
@@ -193,7 +199,6 @@ export interface UseOportunidadesReturn {
   loading: boolean;
   error: string | null;
   setVagas: React.Dispatch<React.SetStateAction<VagaMapeada[]>>;
-  toggleSalvo: (id: number) => void;
   goToPage: (page: number) => void;
   setParams: (partial: Partial<Omit<OportunidadesParams, "page">>) => void;
 }
@@ -208,6 +213,8 @@ const DEFAULT_META: PaginationMeta = {
 };
 
 export function useOportunidades(): UseOportunidadesReturn {
+  const { favoritosIds } = useFavoritos();
+
   const [params, setParamsState] = useState<OportunidadesParams>({
     page: 1,
     size: 20,
@@ -218,14 +225,13 @@ export function useOportunidades(): UseOportunidadesReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [favoritosIds, setFavoritosIds] = useState<Set<number>>(new Set());
-
+  // Ref sempre atualizado — permite que o fetch leia os ids sem ser dependência
+  const favoritosIdsRef = useRef(favoritosIds);
   useEffect(() => {
-    getFavoritos()
-      .then((lista) => setFavoritosIds(new Set(lista.map((o) => o.id))))
-      .catch(() => {/* silencioso */});
-  }, []);
+    favoritosIdsRef.current = favoritosIds;
+  }, [favoritosIds]);
 
+  // ─── Effect 1: fetch — NÃO depende de favoritosIds ───────────────────────
   useEffect(() => {
     let cancelled = false;
 
@@ -240,7 +246,7 @@ export function useOportunidades(): UseOportunidadesReturn {
           const mapeadas = raw
             .map(mapearOportunidade)
             .filter((v): v is VagaMapeada => v !== null)
-            .map((v) => ({ ...v, salvo: favoritosIds.has(v.id) }));
+            .map((v) => ({ ...v, salvo: favoritosIdsRef.current.has(v.id) }));
 
           setVagas(mapeadas);
           setMeta(
@@ -262,7 +268,14 @@ export function useOportunidades(): UseOportunidadesReturn {
 
     load();
     return () => { cancelled = true; };
-  }, [params, favoritosIds]);
+  }, [params]); // ← apenas params, sem favoritosIds
+
+  // ─── Effect 2: sincroniza campo `salvo` sem re-fetchar ───────────────────
+  useEffect(() => {
+    setVagas((prev) =>
+      prev.map((v) => ({ ...v, salvo: favoritosIds.has(v.id) }))
+    );
+  }, [favoritosIds]);
 
   const goToPage = useCallback((page: number) => {
     setParamsState((prev) => ({ ...prev, page }));
@@ -275,7 +288,9 @@ export function useOportunidades(): UseOportunidadesReturn {
         if (
           next.busca === prev.busca &&
           next.tipo === prev.tipo &&
-          next.origem === prev.origem
+          next.origem === prev.origem &&
+          next.remuneracao_min === prev.remuneracao_min &&
+          next.remuneracao_max === prev.remuneracao_max
         ) return prev;
         return next;
       });
@@ -283,17 +298,5 @@ export function useOportunidades(): UseOportunidadesReturn {
     []
   );
 
-  function toggleSalvo(id: number) {
-    setVagas((prev) =>
-      prev.map((v) => (v.id === id ? { ...v, salvo: !v.salvo } : v))
-    );
-    setFavoritosIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  return { vagas, setVagas, toggleSalvo, loading, error, meta, goToPage, setParams };
+  return { vagas, setVagas, loading, error, meta, goToPage, setParams };
 }
