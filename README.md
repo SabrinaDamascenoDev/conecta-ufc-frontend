@@ -26,8 +26,8 @@ A proposta do sistema é oferecer uma experiência centralizada, intuitiva e ace
 - 🔷 TypeScript
 - ⚡ Vite
 - 🎨 CSS / Styled Components / Tailwind
-- 🌐 Axios
-- 🔐 JWT Authentication
+- 🌐 Fetch
+- 🔐 Keyclock
 - 🐍 FastAPI (backend)
 
 ---

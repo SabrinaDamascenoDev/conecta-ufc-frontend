@@ -85,12 +85,16 @@ function diasRestantes(dataFim: string): number {
   return Math.max(Math.ceil((fim.getTime() - hoje.getTime()) / 86_400_000), 0);
 }
 
-function diasPassados(dataCriacao: string): string {
+function diasPassados(dataInicio?: string, dataFim?: string): string {
+  const dataRef = dataInicio || dataFim;
+  if (!dataRef) return "data desconhecida";
+
   const diff = Math.floor(
-    (Date.now() - new Date(dataCriacao).getTime()) / 86_400_000
+    (Date.now() - new Date(dataRef).getTime()) / 86_400_000
   );
   if (diff === 0) return "hoje";
   if (diff === 1) return "1 dia";
+  if (diff < 0) return "em breve";
   return `${diff} dias`;
 }
 
@@ -166,13 +170,16 @@ export function mapearOportunidade(o: OportunidadeAPI): VagaMapeada | null {
   const remuneracaoNum =
     typeof o.remuneracao === "string" ? parseFloat(o.remuneracao) : o.remuneracao;
 
+    console.log(o.data_inicio);
+console.log(new Date(o.data_inicio));
+
   return {
     id: o.id,
     titulo: o.titulo,
     programa,
     origem: o.origem,
     link: o.link,
-    publicadoHa: diasPassados(o.data_criacao),
+    publicadoHa: diasPassados(o.data_inicio, o.data_fim),
     ate: formatarData(o.data_fim),
     encerraEm: diasRestantes(o.data_fim),
     dataCriacao: new Date(o.data_criacao),
