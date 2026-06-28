@@ -21,7 +21,7 @@ async function handleError(response: Response, mensagem: string): Promise<never>
 export async function favoritarVaga({ oportunidade_id }: FavoritarParams): Promise<string> {
   const response = await fetch(`${API_BASE}/oportunidades/${oportunidade_id}/favoritar`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", ...loginService.getAuthHeader() },
+    headers: { "Content-Type": "applicationw/json", ...loginService.getAuthHeader() },
   });
   if (!response.ok) return handleError(response, "Erro ao favoritar a vaga");
   return response.json();

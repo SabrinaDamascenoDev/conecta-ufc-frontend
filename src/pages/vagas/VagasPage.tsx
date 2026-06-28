@@ -77,7 +77,6 @@ export function Vagas() {
     programas: [],
     origem: [],
     valor: [],
-    prazo: [],
   });
 
   const debouncedSearch = useDebounce(search, 400);

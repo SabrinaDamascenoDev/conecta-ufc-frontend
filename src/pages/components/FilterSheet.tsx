@@ -16,17 +16,15 @@ import { type Programa } from "@/hooks/useOportunidades";
 
 const PROGRAMAS: Programa[] = ["PAIP", "PID", "PIBIC", "P&D", "PET", "PET-SI", "PPCA", "Extensão"];
 const FAIXAS_VALOR = ["Até R$ 500", "R$ 501–R$ 700", "R$ 701–R$ 900", "Acima de R$ 900"];
-const PRAZO = ["Encerra em até 7 dias", "Encerra em até 15 dias", "Encerra em até 30 dias"];
 const ORIGEM = ["UFC", "FASTEF", "INSIGHTLAB", "GREAT"];
 
 export type AdvancedFilters = {
   programas: Programa[];
   origem: string[];
   valor: string[];
-  prazo: string[];
 };
 
-const EMPTY: AdvancedFilters = { programas: [], origem: [], valor: [], prazo: [] };
+const EMPTY: AdvancedFilters = { programas: [], origem: [], valor: [] };
 
 interface FilterSheetProps {
   onApply: (filters: AdvancedFilters) => void;
@@ -37,7 +35,7 @@ function toggle<T>(arr: T[], val: T): T[] {
 }
 
 function countActive(f: AdvancedFilters) {
-  return f.programas.length + f.origem.length + f.valor.length + f.prazo.length;
+  return f.programas.length + f.origem.length + f.valor.length;
 }
 
 export function FilterSheet({ onApply }: FilterSheetProps) {
@@ -119,13 +117,6 @@ export function FilterSheet({ onApply }: FilterSheetProps) {
             options={FAIXAS_VALOR}
             selected={draft.valor}
             onToggle={(v) => set("valor", v)}
-          />
-          <Separator />
-          <FilterGroup
-            title="Prazo de inscrição"
-            options={PRAZO}
-            selected={draft.prazo}
-            onToggle={(v) => set("prazo", v)}
           />
         </div>
 

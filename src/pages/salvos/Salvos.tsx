@@ -98,7 +98,7 @@ export function Salvos() {
     programas: [],
     origem: [],
     valor: [],
-    prazo: [],
+
   });
   const [page, setPage] = useState(1);
 
