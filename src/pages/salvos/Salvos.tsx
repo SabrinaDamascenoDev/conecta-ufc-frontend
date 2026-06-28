@@ -295,7 +295,7 @@ export function Salvos() {
                   key={vaga.id}
                   vaga={{ ...vaga, salvo: favoritosIds.has(vaga.id) }}
                   onSave={handleSave}
-                  onSaberMais={(id) => navigate(`/vagas/${id}`)}
+                  onSaberMais={(id) => navigate(`/vaga/${id}`)}
                 />
               ))}
             </div>
