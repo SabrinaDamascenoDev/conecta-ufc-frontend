@@ -41,7 +41,7 @@ src/
 ├── pages/          # Páginas da aplicação
 ├── routes/         # Configuração de rotas
 ├── services/       # Comunicação com API
-├── styles/         # Estilos globais
-├── types/          # Tipagens TypeScript
-├── utils/          # Funções utilitárias
+├── contexts/       # contexts estilizados
+├── hooks/          # hooks estilizados
+├── lib/            # Funções utilitárias
 └── main.tsx
