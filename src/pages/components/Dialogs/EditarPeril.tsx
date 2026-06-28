@@ -6,8 +6,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Mail, ChevronDown, SquarePen } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
+import { getUsuario, type Usuario } from "@/services/usuarioService";
 
 const programas = [
   "PAIP",
@@ -34,17 +35,28 @@ interface EditarPerfilProps {
 }
 
 export function EditarPerfil({ children }: EditarPerfilProps) {
-  const [nome, setNome] = useState("Sabrina Damasceno");
-  const [email, setEmail] = useState("sabrinadamasceno@alu.ufc.br");
-  const [curso, setCurso] = useState("Sistemas de Informação");
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [curso, setCurso] = useState("");
   const [editandoNome, setEditandoNome] = useState(false);
   const [editandoEmail, setEditandoEmail] = useState(false);
   const [showCursos, setShowCursos] = useState(false);
-  const [alertasSelecionados, setAlertasSelecionados] = useState<string[]>([
-    "PAIP",
-    "PID",
-    "PIBIC",
-  ]);
+  const [usuario, setUsuario] = useState<Usuario>()
+  const [alertasSelecionados, setAlertasSelecionados] = useState<string[]>([]);
+
+  useEffect(() => {
+    getUsuario()
+      .then((user) => {
+        setUsuario(user);
+        if (user?.nome && user?.curso && user?.email && user?.oportunidades) {
+          setNome(user.nome);
+          setAlertasSelecionados(user?.oportunidades);
+          setCurso(user?.curso);
+          setEmail(user?.email)
+        }
+      })
+      .catch(() => {});
+  }, [])
 
   function toggleAlerta(p: string) {
     setAlertasSelecionados((prev) =>

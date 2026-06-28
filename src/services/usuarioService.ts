@@ -12,8 +12,27 @@ export interface Usuario {
   oportunidades: string[];
 }
 
+export interface UsuarioPut {
+  email: string;
+  nome: string;
+  oportunidades:string[];
+}
 let usuarioCache: Usuario | null = null;
 let usuarioCachePromise: Promise<Usuario> | null = null;
+
+const cursosMap: Record<string, string> = {
+  "ciencia-da-computacao": "Ciência da Computação",
+  "design-digital": "Design Digital",
+  "engenharia-de-software": "Engenharia de Software",
+  "engenharia-da-computacao": "Engenharia da Computação",
+  "inteligencia-artificial": "Inteligência Artificial",
+  "redes-de-computadores": "Redes de Computadores",
+  "sistemas-de-informacao": "Sistemas de Informação",
+};
+
+export function formatarCurso(curso: string) {
+  return cursosMap[curso] ?? curso;
+}
 
 export async function getUsuario(): Promise<Usuario> {
   if (usuarioCache) return usuarioCache;
@@ -33,7 +52,10 @@ export async function getUsuario(): Promise<Usuario> {
         return response.json() as Promise<Usuario>;
       })
       .then((u) => {
-        usuarioCache = u;
+        usuarioCache = {
+          ...u,
+          curso: formatarCurso(u.curso),
+        };
         return u;
       })
       .catch((err) => {
