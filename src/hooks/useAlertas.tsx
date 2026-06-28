@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { getAlertas } from "@/services/vagasAlertasServiice"; // Ajuste o caminho se necessário
+import { getAlertas } from "@/services/vagasAlertasService"; // Ajuste o caminho se necessário
 import { useFavoritos } from "@/context/FavoritosContext";
 import {
   mapearOportunidade,

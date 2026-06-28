@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import logo from "../../assets/logo.png";
 import { getUsuario, type Usuario } from "@/services/usuarioService";
-import { getAlertas } from "@/services/vagasAlertasServiice"; // Ajuste o import se o nome do arquivo for diferente
+import { getAlertas } from "@/services/vagasAlertasService"; // Ajuste o import se o nome do arquivo for diferente
 
 type NavItem = "vagas" | "salvos" | "alertas" | "perfil";
 
@@ -148,10 +148,10 @@ export function Sidebar() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-white truncate">
-                {nomeExibido}
+                {usuario?.nome}
               </p>
               <p className="text-xs text-white/60 truncate">
-                Sistemas de Informação
+                {usuario?.curso}
               </p>
             </div>
           </button>

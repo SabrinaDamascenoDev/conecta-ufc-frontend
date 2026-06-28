@@ -6,6 +6,10 @@ export interface Usuario {
   sub: string;
   email: string;
   preferred_username: string;
+  preferencias: string[];
+  nome: string;
+  curso: string;
+  oportunidades: string[];
 }
 
 let usuarioCache: Usuario | null = null;
@@ -33,7 +37,7 @@ export async function getUsuario(): Promise<Usuario> {
         return u;
       })
       .catch((err) => {
-        usuarioCachePromise = null; 
+        usuarioCachePromise = null;
         throw err;
       });
   }
@@ -44,4 +48,19 @@ export async function getUsuario(): Promise<Usuario> {
 export function clearUsuarioCache() {
   usuarioCache = null;
   usuarioCachePromise = null;
+}
+
+export async function putUsuario(): Promise<Usuario> {
+  const response = await fetch(`${API_BASE}/usuarios/me`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...loginService.getAuthHeader(),
+    },
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail ?? "Erro ao pegar os dados do usuário");
+  }
+  return response.json() as Promise<Usuario>;
 }

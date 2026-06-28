@@ -1,4 +1,4 @@
-// src/services/vagasFavoritasService.ts
+
 import type { OportunidadeAPI, OportunidadesParams, PaginationMeta } from "../hooks/useOportunidades";
 import { loginService } from "./loginServise";
 
