@@ -1,9 +1,15 @@
-// src/hooks/useOportunidades.ts
+
 import { useState, useEffect, useCallback, useRef } from "react";
-import { fetchOportunidades } from "@/services/vagasService";
+import {
+  fetchOportunidades,
+  fetchOportunidadesAZ,
+  fetchOportunidadesMaisRecentes,
+  type OportunidadesResponse,
+} from "@/services/vagasService";
 import { useFavoritos } from "@/context/FavoritosContext";
 
 export type Programa = "PAIP" | "PID" | "PIBIC" | "P&D" | "PET" | "PET-SI" | "PPCA" | "Extensão";
+export type SortValue = "recentes" | "antigas" | "az" | "za";
 
 export interface ResultadoAPI {
   id: number;
@@ -64,9 +70,12 @@ export interface OportunidadesParams {
   tipo?: string;
   remuneracao_min?: number;
   remuneracao_max?: number;
+  data_inicio?: string;
+  data_fim?: string;
+  sort?: SortValue;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 
 function diasRestantes(dataFim: string): number {
   const fim = new Date(dataFim);
@@ -99,7 +108,6 @@ function formatarValor(remuneracao: number | string): string {
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-// ─── Mapeamento ───────────────────────────────────────────────────────────────
 
 function normalizarTipo(tipo: string): string {
   return tipo.toUpperCase().trim().replace(/\s+/g, " ");
@@ -191,7 +199,66 @@ export const PROGRAMA_PARA_TIPO: Partial<Record<Programa, string>> = {
   Extensão: "Extensão",
 };
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+async function fetchInvertido(
+  fetchFn: (p: OportunidadesParams) => Promise<OportunidadesResponse>,
+  params: OportunidadesParams,
+  totalPagesCache: React.MutableRefObject<number | null>
+): Promise<OportunidadesResponse> {
+  let totalPages = totalPagesCache.current;
+
+  if (totalPages === null) {
+    const first = await fetchFn({ ...params, page: 1 });
+    totalPages = first.meta?.total_pages ?? 1;
+    totalPagesCache.current = totalPages;
+  }
+
+  const paginaVirtual = params.page ?? 1;
+  const paginaReal    = totalPages - paginaVirtual + 1;
+
+  const result = await fetchFn({ ...params, page: Math.max(paginaReal, 1) });
+
+  return {
+    ...result,
+    data: [...result.data].reverse(),
+    meta: result.meta
+      ? {
+          ...result.meta,
+          current_page: paginaVirtual,
+          has_next:     paginaVirtual < totalPages,
+          has_previous: paginaVirtual > 1,
+        }
+      : result.meta,
+  };
+}
+
+
+
+function criarEscolherFetch(
+  totalPagesCache: React.MutableRefObject<number | null>
+) {
+  return function escolherFetch(
+    params: OportunidadesParams
+  ): Promise<OportunidadesResponse> {
+    switch (params.sort) {
+      case "az":
+        return fetchOportunidadesAZ(params);
+
+      case "za":
+        return fetchInvertido(fetchOportunidadesAZ, params, totalPagesCache);
+
+      case "recentes":
+        return fetchOportunidadesMaisRecentes(params);
+
+      case "antigas":
+        return fetchInvertido(fetchOportunidadesMaisRecentes, params, totalPagesCache);
+
+      default:
+        return fetchOportunidades(params);
+    }
+  };
+}
+
 
 export interface UseOportunidadesReturn {
   vagas: VagaMapeada[];
@@ -205,11 +272,11 @@ export interface UseOportunidadesReturn {
 
 const DEFAULT_META: PaginationMeta = {
   total_elements: 0,
-  total_pages: 1,
-  current_page: 1,
-  size: 20,
-  has_next: false,
-  has_previous: false,
+  total_pages:    1,
+  current_page:   1,
+  size:           20,
+  has_next:       false,
+  has_previous:   false,
 };
 
 export function useOportunidades(): UseOportunidadesReturn {
@@ -218,20 +285,22 @@ export function useOportunidades(): UseOportunidadesReturn {
   const [params, setParamsState] = useState<OportunidadesParams>({
     page: 1,
     size: 20,
+    sort: "recentes",
   });
 
-  const [vagas, setVagas] = useState<VagaMapeada[]>([]);
-  const [meta, setMeta] = useState<PaginationMeta>(DEFAULT_META);
+  const [vagas,   setVagas]   = useState<VagaMapeada[]>([]);
+  const [meta,    setMeta]    = useState<PaginationMeta>(DEFAULT_META);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error,   setError]   = useState<string | null>(null);
 
-  // Ref sempre atualizado — permite que o fetch leia os ids sem ser dependência
-  const favoritosIdsRef = useRef(favoritosIds);
+  const favoritosIdsRef  = useRef(favoritosIds);
+  const totalPagesCache  = useRef<number | null>(null);
+  const escolherFetch    = useRef(criarEscolherFetch(totalPagesCache));
+
   useEffect(() => {
     favoritosIdsRef.current = favoritosIds;
   }, [favoritosIds]);
 
-  // ─── Effect 1: fetch — NÃO depende de favoritosIds ───────────────────────
   useEffect(() => {
     let cancelled = false;
 
@@ -240,7 +309,7 @@ export function useOportunidades(): UseOportunidadesReturn {
         setLoading(true);
         setError(null);
 
-        const { data: raw, meta: metaApi } = await fetchOportunidades(params);
+        const { data: raw, meta: metaApi } = await escolherFetch.current(params);
 
         if (!cancelled) {
           const mapeadas = raw
@@ -253,8 +322,8 @@ export function useOportunidades(): UseOportunidadesReturn {
             metaApi ?? {
               ...DEFAULT_META,
               total_elements: mapeadas.length,
-              current_page: params.page ?? 1,
-              size: params.size ?? 20,
+              current_page:   params.page ?? 1,
+              size:            params.size ?? 20,
             }
           );
         }
@@ -268,9 +337,8 @@ export function useOportunidades(): UseOportunidadesReturn {
 
     load();
     return () => { cancelled = true; };
-  }, [params]); // ← apenas params, sem favoritosIds
+  }, [params]);
 
-  // ─── Effect 2: sincroniza campo `salvo` sem re-fetchar ───────────────────
   useEffect(() => {
     setVagas((prev) =>
       prev.map((v) => ({ ...v, salvo: favoritosIds.has(v.id) }))
@@ -285,13 +353,18 @@ export function useOportunidades(): UseOportunidadesReturn {
     (partial: Partial<Omit<OportunidadesParams, "page">>) => {
       setParamsState((prev) => {
         const next = { ...prev, ...partial, page: 1 };
+
         if (
-          next.busca === prev.busca &&
-          next.tipo === prev.tipo &&
-          next.origem === prev.origem &&
+          next.busca           === prev.busca           &&
+          next.tipo            === prev.tipo            &&
+          next.origem          === prev.origem          &&
+          next.sort            === prev.sort            &&
           next.remuneracao_min === prev.remuneracao_min &&
           next.remuneracao_max === prev.remuneracao_max
         ) return prev;
+
+        totalPagesCache.current = null;
+
         return next;
       });
     },
