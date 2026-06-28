@@ -1,3 +1,4 @@
+// src/pages/VagaDetalhe.tsx
 import { useParams, useNavigate } from "react-router-dom";
 import {
   BookmarkIcon,
@@ -20,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { Sidebar } from "../components/Sidebar";
 import Sair from "../components/Dialogs/Sair";
 import { useOportunidades, type VagaMapeada, type Programa } from "@/hooks/useOportunidades";
-import { useState } from "react";
+import { useFavoritos } from "@/context/FavoritosContext";
 
 function ProgramaIcon({ programa }: { programa: Programa }) {
   const base =
@@ -54,17 +55,16 @@ function EditalPlaceholder({ link }: { link: string }) {
 export function VagaDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { vagas, toggleSalvo, loading } = useOportunidades();
+  const { vagas, loading } = useOportunidades();
+  const { favoritosIds, toggleFavorito } = useFavoritos();
 
   const vaga: VagaMapeada | undefined = vagas.find((v) => v.id === Number(id));
-  const [salvoLocal, setSalvoLocal] = useState<boolean | null>(null);
 
-  const salvo = salvoLocal !== null ? salvoLocal : vaga?.salvo ?? false;
+  const salvo = vaga ? favoritosIds.has(vaga.id) : false;
 
-  function handleToggleSalvo() {
+  async function handleToggleSalvo() {
     if (!vaga) return;
-    setSalvoLocal(!salvo);
-    toggleSalvo(vaga.id);
+    await toggleFavorito(vaga.id);
   }
 
   if (loading) {
@@ -87,10 +87,9 @@ export function VagaDetalhe() {
 
   return (
     <div className="flex min-h-screen bg-white font-sans">
-      <Sidebar alertasCount={10} />
+      <Sidebar />
 
       <main className="flex flex-col flex-1 min-w-0 lg:pl-[262px]">
-        {/* ── Topbar ── */}
         <div className="flex items-center justify-between px-8 pt-7 pb-0 gap-4">
           <div className="pl-10 lg:pl-0 flex-1" />
           <div className="flex items-center gap-2 ml-auto">
@@ -116,6 +115,8 @@ export function VagaDetalhe() {
         </nav>
 
         <div className="bg-[#F2F2F2] ml-8 me-8 rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+
+          {/* Header */}
           <div className="flex items-start justify-between gap-4 px-8 py-6 border-b border-gray-100 flex-wrap">
             <div className="flex items-center gap-4">
               <ProgramaIcon programa={vaga.programa} />
@@ -149,6 +150,8 @@ export function VagaDetalhe() {
               </Button>
             </div>
           </div>
+
+          {/* Banner de resultados */}
           {comResultados && (
             <div className="mx-8 mt-4 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
               <AlertCircle size={16} className="shrink-0 mt-0.5" />
@@ -173,6 +176,7 @@ export function VagaDetalhe() {
 
           {/* Conteúdo */}
           <div className="px-8 py-2 flex flex-col gap-7 mt-4">
+
             {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-4">
@@ -204,7 +208,7 @@ export function VagaDetalhe() {
                   className={cn(
                     "w-9 h-9 rounded-lg flex items-center justify-center shrink-0",
                     vaga.encerraEm <= 5  ? "bg-[#FF151920]" :
-                    vaga.encerraEm <= 10 ? "bg-orange-100" : "bg-green-100"
+                    vaga.encerraEm <= 10 ? "bg-orange-100"  : "bg-green-100"
                   )}
                 >
                   <Clock size={17} className={cn(encerraColor(vaga.encerraEm))} />
@@ -248,7 +252,7 @@ export function VagaDetalhe() {
               </div>
             </div>
 
-            {/* Requisitos — não vem da API */}
+            {/* Requisitos */}
             <div>
               <p className="text-xs font-medium text-gray-400 mb-3">
                 Requisitos do processo seletivo
@@ -292,6 +296,7 @@ export function VagaDetalhe() {
               </button>
             </div>
           </div>
+
         </div>
       </main>
     </div>

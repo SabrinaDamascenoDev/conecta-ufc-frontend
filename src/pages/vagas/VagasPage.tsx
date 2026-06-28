@@ -9,6 +9,7 @@ import { type AdvancedFilters } from "../components/FilterSheet";
 import {
   useOportunidades,
   type Programa,
+  type SortValue,      
   PROGRAMA_PARA_TIPO,
 } from "@/hooks/useOportunidades";
 import { useFavoritos } from "@/context/FavoritosContext";
@@ -19,7 +20,6 @@ import { Loader2 } from "lucide-react";
 import { getUsuario, type Usuario } from "@/services/usuarioService";
 
 type FilterOption = "Todas" | Programa;
-type SortValue = "recentes" | "antigas" | "az" | "za";
 
 function useDebounce<T>(value: T, delay = 400): T {
   const [debounced, setDebounced] = useState(value);
@@ -31,10 +31,10 @@ function useDebounce<T>(value: T, delay = 400): T {
 }
 
 const FAIXA_PARA_REMUNERACAO: Record<string, { min?: number; max?: number }> = {
-  "Até R$ 500": { max: 500 },
-  "R$ 501–R$ 700": { min: 501, max: 700 },
-  "R$ 701–R$ 900": { min: 701, max: 900 },
-  "Acima de R$ 900": { min: 901 },
+  "Até R$ 500":       { max: 500 },
+  "R$ 501–R$ 700":    { min: 501, max: 700 },
+  "R$ 701–R$ 900":    { min: 701, max: 900 },
+  "Acima de R$ 900":  { min: 901 },
 };
 
 function resolveRemuneracao(faixas: string[]): {
@@ -55,8 +55,7 @@ function resolveRemuneracao(faixas: string[]): {
 
   return {
     remuneracao_min: mins.length > 0 ? Math.min(...mins) : undefined,
-    remuneracao_max:
-      !hasOpenEnd && maxs.length > 0 ? Math.max(...maxs) : undefined,
+    remuneracao_max: !hasOpenEnd && maxs.length > 0 ? Math.max(...maxs) : undefined,
   };
 }
 
@@ -70,21 +69,19 @@ function getInitials(name: string): string {
 }
 
 export function Vagas() {
-  const [search, setSearch] = useState("");
-  const [filtro, setFiltro] = useState<FilterOption>("Todas");
-  const [sort, setSort] = useState<SortValue>("recentes");
+  const [search, setSearch]   = useState("");
+  const [filtro, setFiltro]   = useState<FilterOption>("Todas");
+  const [sort, setSort]       = useState<SortValue>("recentes");
   const [usuario, setUsuario] = useState<Usuario | null>(null);
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>({
     programas: [],
     origem: [],
     valor: [],
-    prazo: [],
   });
 
   const debouncedSearch = useDebounce(search, 400);
   const { toggleFavorito } = useFavoritos();
-  const { vagas, loading, error, meta, goToPage, setParams } =
-    useOportunidades();
+  const { vagas, loading, error, meta, goToPage, setParams } = useOportunidades();
 
   useEffect(() => {
     const tipo: string | undefined = (() => {
@@ -110,14 +107,17 @@ export function Vagas() {
       origem,
       remuneracao_min,
       remuneracao_max,
+      sort, 
     });
   }, [
     debouncedSearch,
     filtro,
+    sort,                        
     advancedFilters.programas,
     advancedFilters.origem,
     advancedFilters.valor,
   ]);
+
   const handleSave = useCallback(
     async (id: number) => {
       await toggleFavorito(id);
@@ -131,24 +131,8 @@ export function Vagas() {
       .catch(() => {});
   }, []);
 
-  const nomeExibido =
-    usuario?.preferred_username ?? usuario?.email ?? "Usuário";
-  const iniciais = getInitials(nomeExibido);
-
-  const vagasOrdenadas = [...vagas].sort((a, b) => {
-    switch (sort) {
-      case "recentes":
-        return a.dataCriacao.getTime() - b.dataCriacao.getTime();
-      case "antigas":
-        return b.dataCriacao.getTime() - a.dataCriacao.getTime();
-      case "az":
-        return a.titulo.localeCompare(b.titulo, "pt-BR");
-      case "za":
-        return b.titulo.localeCompare(a.titulo, "pt-BR");
-      default:
-        return 0;
-    }
-  });
+  const nomeExibido = usuario?.preferred_username ?? usuario?.email ?? "Usuário";
+  const iniciais    = getInitials(nomeExibido);
 
   const navigate = useNavigate();
 
@@ -205,6 +189,9 @@ export function Vagas() {
                 </>
               )}
             </p>
+
+            {/* 👇 onChange agora só atualiza o estado local;
+                  o useEffect acima cuida de repassar ao hook */}
             <SortDropdown
               value={sort}
               onChange={(v) => setSort(v as SortValue)}
@@ -229,9 +216,10 @@ export function Vagas() {
             </div>
           )}
 
-          {!loading && !error && vagasOrdenadas.length > 0 && (
+          {/* 👇 usa `vagas` diretamente — ordenação vem do backend */}
+          {!loading && !error && vagas.length > 0 && (
             <div className="flex flex-col gap-4">
-              {vagasOrdenadas.map((vaga) => (
+              {vagas.map((vaga) => (
                 <VagaCard
                   key={vaga.id}
                   vaga={vaga}
@@ -242,7 +230,7 @@ export function Vagas() {
             </div>
           )}
 
-          {!loading && !error && vagasOrdenadas.length === 0 && (
+          {!loading && !error && vagas.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full py-20 text-center">
               <img
                 src={notFound}

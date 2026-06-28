@@ -1,6 +1,5 @@
 import { test, expect } from "@playwright/test";
 
-// Esses testes NÃO usam storageState — testam o login em si
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test.describe("LoginPage", () => {

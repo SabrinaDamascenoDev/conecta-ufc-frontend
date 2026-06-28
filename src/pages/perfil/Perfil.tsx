@@ -6,7 +6,6 @@ import { Mail, SquarePen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { getUsuario, type Usuario } from "@/services/usuarioService";
 
-const alertasAtivos = ["PAIP", "PID", "PIBIC", "Extensão"];
 
 function getInitials(name: string): string {
   return name
@@ -29,10 +28,12 @@ export function Perfil() {
     const name = usuario?.preferred_username ?? "Usuário";
     const email = usuario?.email;
     const iniciais = getInitials(name)
+    const alertasAtivos = usuario?.oportunidades
+
 
   return (
     <div className="flex min-h-screen bg-white font-sans w-full">
-      <Sidebar alertasCount={10} />
+      <Sidebar />
       <main className="flex flex-col flex-1 min-w-0 w-full lg:pl-[262px]">
 
         <div className="flex items-center justify-end px-8 pt-7 pb-0 gap-2">
@@ -48,10 +49,10 @@ export function Perfil() {
               {iniciais}
             </div>
             <div className="flex flex-col gap-1 flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">{name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{usuario?.nome}</h1>
               <p className="text-sm text-gray-400">{email}</p>
               <span className="mt-1 inline-flex items-center px-3 py-1 rounded-full bg-[#003f7f] text-white text-xs font-semibold w-fit">
-                Sistemas de Informação
+                {usuario?.curso}
               </span>
             </div>
             <EditarPerfil>
@@ -68,7 +69,7 @@ export function Perfil() {
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-medium text-gray-500">Nome</label>
               <div className="bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-sm text-gray-800 shadow-sm">
-                Sabrina Damasceno
+                {usuario?.nome}
               </div>
             </div>
 
@@ -76,7 +77,7 @@ export function Perfil() {
               <label className="text-sm font-medium text-gray-500">Email Institucional</label>
               <div className="bg-white border border-gray-200 rounded-2xl px-5 py-3.5 text-sm text-gray-800 shadow-sm flex items-center gap-2">
                 <Mail size={14} className="text-gray-400 shrink-0" />
-                sabrinadamasceno@alu.ufc.br
+                {email}
               </div>
             </div>
           </div>
@@ -84,7 +85,7 @@ export function Perfil() {
           <div className="flex flex-col gap-3">
             <label className="text-sm font-medium text-gray-500">Alertas selecionados</label>
             <div className="flex flex-wrap gap-2">
-              {alertasAtivos.map((a) => (
+              {alertasAtivos?.map((a) => (
                 <span
                   key={a}
                   className="px-4 py-1.5 rounded-full bg-[#003f7f] text-white text-xs font-semibold"
