@@ -3,31 +3,24 @@ import {
   DialogContent,
   DialogClose,
   DialogTrigger,
+  DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Mail, ChevronDown, SquarePen } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { getUsuario, type Usuario } from "@/services/usuarioService";
+import { getUsuario, putUsuario, type Usuario } from "@/services/usuarioService";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 const programas = [
-  "PAIP",
-  "PID",
-  "PIBIC",
-  "P&D",
-  "PET",
-  "PET-SI",
-  "PPCA",
-  "Extensão",
+  "PAIP", "PID", "PIBIC", "P&D", "PET", "PET-SI", "PPCA", "Extensão",
 ];
 const cursos = [
-  "Ciência da Computação",
-  "Design Digital",
-  "Engenharia de Software",
-  "Engenharia da Computação",
-  "Inteligencia Artificial",
-  "Redes de Computadores",
-  "Sistemas de Informação",
+  "Ciência da Computação", "Design Digital", "Engenharia de Software",
+  "Engenharia da Computação", "Inteligencia Artificial",
+  "Redes de Computadores", "Sistemas de Informação",
 ];
 
 interface EditarPerfilProps {
@@ -41,8 +34,10 @@ export function EditarPerfil({ children }: EditarPerfilProps) {
   const [editandoNome, setEditandoNome] = useState(false);
   const [editandoEmail, setEditandoEmail] = useState(false);
   const [showCursos, setShowCursos] = useState(false);
-  const [usuario, setUsuario] = useState<Usuario>()
+  const [usuario, setUsuario] = useState<Usuario>();
   const [alertasSelecionados, setAlertasSelecionados] = useState<string[]>([]);
+  const [salvando, setSalvando] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     getUsuario()
@@ -50,186 +45,213 @@ export function EditarPerfil({ children }: EditarPerfilProps) {
         setUsuario(user);
         if (user?.nome && user?.curso && user?.email && user?.oportunidades) {
           setNome(user.nome);
-          setAlertasSelecionados(user?.oportunidades);
-          setCurso(user?.curso);
-          setEmail(user?.email)
+          setAlertasSelecionados(user.oportunidades);
+          setCurso(user.curso);
+          setEmail(user.email);
         }
       })
       .catch(() => {});
-  }, [])
+  }, []);
 
   function toggleAlerta(p: string) {
     setAlertasSelecionados((prev) =>
-      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p],
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
     );
   }
 
+  async function handleSalvar() {
+    try {
+      setSalvando(true);
+      const atualizado = await putUsuario({
+        nome,
+        email,
+        curso,
+        oportunidades: alertasSelecionados,
+      });
+      setUsuario(atualizado);
+      toast.success("Dados salvos com sucesso!");
+      closeRef.current?.click();
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erro ao salvar");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   return (
-    <Dialog>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent
-        showCloseButton={false}
-        className="sm:max-w-[520px] bg-white rounded-3xl p-8 flex flex-col gap-6 shadow-xl border-none outline-none"
-      >
-        <div className="flex flex-col gap-1 text-center">
-          <h2 className="text-xl font-bold text-gray-900">
-            Edite seus dados pessoais
-          </h2>
-          <p className="text-sm text-gray-400">
-            Edite aqui todos os seus dados pessoais
-          </p>
-        </div>
+    <>
+      <Toaster richColors position="top-right" />
+      <Dialog>
+        <DialogTrigger asChild>{children}</DialogTrigger>
+        <DialogClose ref={closeRef} className="hidden" />
+        <DialogContent
+          showCloseButton={false}
+          className="sm:max-w-[520px] bg-white rounded-3xl p-8 flex flex-col gap-6 shadow-xl border-none outline-none"
+        >
+          {/* Corrige warnings de acessibilidade do Radix */}
+          <DialogTitle className="sr-only">Editar Perfil</DialogTitle>
+          <DialogDescription className="sr-only">
+            Formulário para editar dados pessoais
+          </DialogDescription>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-700">Nome</label>
-          <div
-            className={cn(
-              "flex items-center justify-between border rounded-xl px-4 py-3 bg-gray-50 transition-all",
-              editandoNome ? "border-[#003f7f] bg-white" : "border-gray-200",
-            )}
-          >
-            {editandoNome ? (
-              <input
-                autoFocus
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                onBlur={() => setEditandoNome(false)}
-                className="flex-1 text-sm text-gray-800 bg-transparent outline-none"
-              />
-            ) : (
-              <span className="flex-1 text-sm text-gray-700">{nome}</span>
-            )}
-            <button onClick={() => setEditandoNome(true)}>
-              <SquarePen
-                size={15}
-                className={cn(
-                  "transition-colors",
-                  editandoNome
-                    ? "text-[#003f7f]"
-                    : "text-gray-400 hover:text-[#003f7f]",
-                )}
-              />
-            </button>
+          <div className="flex flex-col gap-1 text-center">
+            <h2 className="text-xl font-bold text-gray-900">
+              Edite seus dados pessoais
+            </h2>
+            <p className="text-sm text-gray-400">
+              Edite aqui todos os seus dados pessoais
+            </p>
           </div>
-        </div>
 
-        <div className="flex flex-col gap-1.5 relative">
-          <label className="text-sm font-medium text-gray-700">Curso</label>
-          <button
-            onClick={() => setShowCursos((v) => !v)}
-            className={cn(
-              "flex items-center justify-between border rounded-xl px-4 py-3 bg-gray-50 transition-all text-left",
-              showCursos ? "border-[#003f7f] bg-white" : "border-gray-200",
-            )}
-          >
-            <span className="text-sm text-gray-700">{curso}</span>
-            <ChevronDown
-              size={15}
+          {/* Nome */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-gray-700">Nome</label>
+            <div
               className={cn(
-                "text-gray-400 transition-transform",
-                showCursos && "rotate-180",
+                "flex items-center justify-between border rounded-xl px-4 py-3 bg-gray-50 transition-all",
+                editandoNome ? "border-[#003f7f] bg-white" : "border-gray-200",
               )}
-            />
-          </button>
-          {showCursos && (
-            <div className="absolute top-[72px] left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 overflow-hidden">
-              {cursos.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => {
-                    setCurso(c);
-                    setShowCursos(false);
-                  }}
+            >
+              {editandoNome ? (
+                <input
+                  autoFocus
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  onBlur={() => setEditandoNome(false)}
+                  className="flex-1 text-sm text-gray-800 bg-transparent outline-none"
+                />
+              ) : (
+                <span className="flex-1 text-sm text-gray-700">{nome}</span>
+              )}
+              <button onClick={() => setEditandoNome(true)}>
+                <SquarePen
+                  size={15}
                   className={cn(
-                    "w-full text-left px-4 py-2.5 text-sm transition-colors",
-                    c === curso
-                      ? "bg-[#003f7f]/10 text-[#003f7f] font-medium"
-                      : "text-gray-700 hover:bg-gray-50",
+                    "transition-colors",
+                    editandoNome ? "text-[#003f7f]" : "text-gray-400 hover:text-[#003f7f]",
                   )}
-                >
-                  {c}
-                </button>
-              ))}
+                />
+              </button>
             </div>
-          )}
-        </div>
+          </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label className="text-sm font-medium text-gray-700">
-            Email Institucional
-          </label>
-          <div
-            className={cn(
-              "flex items-center gap-2 border rounded-xl px-4 py-3 bg-gray-50 transition-all",
-              editandoEmail ? "border-[#003f7f] bg-white" : "border-gray-200",
-            )}
-          >
-            <Mail size={14} className="text-gray-400 shrink-0" />
-            {editandoEmail ? (
-              <input
-                autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                onBlur={() => setEditandoEmail(false)}
-                className="flex-1 text-sm text-gray-800 bg-transparent outline-none"
-              />
-            ) : (
-              <span className="flex-1 text-sm text-gray-700">{email}</span>
-            )}
-            <button onClick={() => setEditandoEmail(true)}>
-              <SquarePen
+          {/* Curso */}
+          <div className="flex flex-col gap-1.5 relative">
+            <label className="text-sm font-medium text-gray-700">Curso</label>
+            <button
+              onClick={() => setShowCursos((v) => !v)}
+              className={cn(
+                "flex items-center justify-between border rounded-xl px-4 py-3 bg-gray-50 transition-all text-left",
+                showCursos ? "border-[#003f7f] bg-white" : "border-gray-200",
+              )}
+            >
+              <span className="text-sm text-gray-700">{curso}</span>
+              <ChevronDown
                 size={15}
-                className={cn(
-                  "transition-colors",
-                  editandoEmail
-                    ? "text-[#003f7f]"
-                    : "text-gray-400 hover:text-[#003f7f]",
-                )}
+                className={cn("text-gray-400 transition-transform", showCursos && "rotate-180")}
               />
             </button>
+            {showCursos && (
+              <div className="absolute top-[72px] left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 overflow-hidden">
+                {cursos.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => { setCurso(c); setShowCursos(false); }}
+                    className={cn(
+                      "w-full text-left px-4 py-2.5 text-sm transition-colors",
+                      c === curso
+                        ? "bg-[#003f7f]/10 text-[#003f7f] font-medium"
+                        : "text-gray-700 hover:bg-gray-50",
+                    )}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
 
-        <div className="flex flex-col gap-2.5">
-          <label className="text-sm font-medium text-gray-700">
-            Edite quais as oportunidades você deseja receber alertas
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {programas.map((p) => {
-              const ativo = alertasSelecionados.includes(p);
-              return (
-                <button
-                  key={p}
-                  onClick={() => toggleAlerta(p)}
-                  className={cn(
-                    "px-4 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150",
-                    ativo
-                      ? "bg-[#003f7f] text-white border-[#003f7f]"
-                      : "bg-white text-gray-500 border-gray-300 hover:border-[#003f7f] hover:text-[#003f7f]",
-                  )}
-                >
-                  {p}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <DialogClose asChild>
-            <Button
-              type="button"
-              variant="secondary"
-              className="flex-1 h-12 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-base cursor-pointer"
+          {/* Email */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-gray-700">Email Institucional</label>
+            <div
+              className={cn(
+                "flex items-center gap-2 border rounded-xl px-4 py-3 bg-gray-50 transition-all",
+                editandoEmail ? "border-[#003f7f] bg-white" : "border-gray-200",
+              )}
             >
-              Voltar
+              <Mail size={14} className="text-gray-400 shrink-0" />
+              {editandoEmail ? (
+                <input
+                  autoFocus
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onBlur={() => setEditandoEmail(false)}
+                  className="flex-1 text-sm text-gray-800 bg-transparent outline-none"
+                />
+              ) : (
+                <span className="flex-1 text-sm text-gray-700">{email}</span>
+              )}
+              <button onClick={() => setEditandoEmail(true)}>
+                <SquarePen
+                  size={15}
+                  className={cn(
+                    "transition-colors",
+                    editandoEmail ? "text-[#003f7f]" : "text-gray-400 hover:text-[#003f7f]",
+                  )}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Alertas */}
+          <div className="flex flex-col gap-2.5">
+            <label className="text-sm font-medium text-gray-700">
+              Edite quais as oportunidades você deseja receber alertas
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {programas.map((p) => {
+                const ativo = alertasSelecionados.includes(p);
+                return (
+                  <button
+                    key={p}
+                    onClick={() => toggleAlerta(p)}
+                    className={cn(
+                      "px-4 py-1.5 rounded-full text-xs font-semibold border transition-all duration-150",
+                      ativo
+                        ? "bg-[#003f7f] text-white border-[#003f7f]"
+                        : "bg-white text-gray-500 border-gray-300 hover:border-[#003f7f] hover:text-[#003f7f]",
+                    )}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Ações */}
+          <div className="flex gap-3">
+            <DialogClose asChild>
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex-1 h-12 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold text-base cursor-pointer"
+              >
+                Voltar
+              </Button>
+            </DialogClose>
+            <Button
+              onClick={handleSalvar}
+              disabled={salvando}
+              className="flex-1 h-12 rounded-xl bg-[#003f7f] hover:bg-[#002d5c] text-white font-semibold text-sm cursor-pointer disabled:opacity-60"
+            >
+              {salvando ? "Salvando..." : "Salvar"}
             </Button>
-          </DialogClose>
-          <Button className="flex-1 h-12 rounded-xl bg-[#003f7f] hover:bg-[#002d5c] text-white font-semibold text-sm cursor-pointer">
-            Salvar
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

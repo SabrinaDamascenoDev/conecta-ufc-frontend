@@ -1,5 +1,6 @@
-// src/pages/VagaDetalhe.tsx
-import { useParams, useNavigate } from "react-router-dom";
+
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import {
   BookmarkIcon,
   Clock,
@@ -20,12 +21,14 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "../components/Sidebar";
 import Sair from "../components/Dialogs/Sair";
-import { useOportunidades, type VagaMapeada, type Programa } from "@/hooks/useOportunidades";
+import { mapearOportunidade, type VagaMapeada, type Programa } from "@/hooks/useOportunidades";
+import { getAlertas } from "@/services/vagasAlertasService";
+import { fetchOportunidades } from "@/services/vagasService";
 import { useFavoritos } from "@/context/FavoritosContext";
+import { getUsuario, type Usuario } from "@/services/usuarioService";
 
 function ProgramaIcon({ programa }: { programa: Programa }) {
-  const base =
-    "w-13 h-13 rounded-xl flex items-center justify-center bg-[#dce8f7] shrink-0";
+  const base = "w-13 h-13 rounded-xl flex items-center justify-center bg-[#dce8f7] shrink-0";
   if (programa === "PID")   return <div className={base}><GraduationCap size={24} className="text-[#00488C]" /></div>;
   if (programa === "PIBIC") return <div className={base}><FlaskConical   size={24} className="text-[#00488C]" /></div>;
   if (programa === "P&D")   return <div className={base}><MicroscopeIcon size={24} className="text-[#00488C]" /></div>;
@@ -52,15 +55,58 @@ function EditalPlaceholder({ link }: { link: string }) {
   );
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n) => n[0].toUpperCase())
+    .join("");
+}
+
 export function VagaDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { vagas, loading } = useOportunidades();
+  const location = useLocation();
+  const origem: "vagas" | "alertas" = location.state?.origem ?? "vagas";
+
   const { favoritosIds, toggleFavorito } = useFavoritos();
 
-  const vaga: VagaMapeada | undefined = vagas.find((v) => v.id === Number(id));
+  const [vaga, setVaga] = useState<VagaMapeada | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
+
+
+  useEffect(() => {
+    getUsuario()
+      .then(setUsuario)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    setError(null);
+
+    const fetchFn = origem === "alertas"
+      ? () => getAlertas({ size: 20 })
+      : () => fetchOportunidades({ size: 20 });
+
+    fetchFn()
+      .then(({ data }) => {
+        const raw = data.find((o) => o.id === Number(id));
+        if (!raw) throw new Error("Vaga não encontrada");
+        const mapeada = mapearOportunidade(raw);
+        if (!mapeada) throw new Error("Vaga não encontrada");
+        setVaga(mapeada);
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar vaga"))
+      .finally(() => setLoading(false));
+  }, [id, origem]);
 
   const salvo = vaga ? favoritosIds.has(vaga.id) : false;
+  const iniciais = getInitials(usuario?.preferred_username ?? usuario?.email ?? "Usuário");
 
   async function handleToggleSalvo() {
     if (!vaga) return;
@@ -75,10 +121,10 @@ export function VagaDetalhe() {
     );
   }
 
-  if (!vaga) {
+  if (error || !vaga) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-gray-500">Vaga não encontrada.</p>
+        <p className="text-gray-500">{error ?? "Vaga não encontrada."}</p>
       </div>
     );
   }
@@ -97,7 +143,7 @@ export function VagaDetalhe() {
               className="w-11 h-11 rounded-full bg-[#5b8de8] flex items-center cursor-pointer justify-center text-xs font-bold text-white"
               onClick={() => navigate("/perfil")}
             >
-              SD
+              {iniciais}
             </button>
             <Sair />
           </div>
@@ -106,9 +152,9 @@ export function VagaDetalhe() {
         <nav className="flex items-center gap-1.5 text-sm text-gray-400 mb-5 pl-8">
           <button
             className="hover:text-gray-700 transition-colors cursor-pointer"
-            onClick={() => navigate("/vagas")}
+            onClick={() => navigate(origem === "alertas" ? "/alertas" : "/vagas")}
           >
-            vagas
+            {origem === "alertas" ? "alertas" : "vagas"}
           </button>
           <ChevronRight size={13} />
           <span className="text-gray-700">saiba mais</span>
@@ -116,7 +162,6 @@ export function VagaDetalhe() {
 
         <div className="bg-[#F2F2F2] ml-8 me-8 rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
 
-          {/* Header */}
           <div className="flex items-start justify-between gap-4 px-8 py-6 border-b border-gray-100 flex-wrap">
             <div className="flex items-center gap-4">
               <ProgramaIcon programa={vaga.programa} />
@@ -151,7 +196,6 @@ export function VagaDetalhe() {
             </div>
           </div>
 
-          {/* Banner de resultados */}
           {comResultados && (
             <div className="mx-8 mt-4 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">
               <AlertCircle size={16} className="shrink-0 mt-0.5" />
@@ -174,10 +218,8 @@ export function VagaDetalhe() {
             </div>
           )}
 
-          {/* Conteúdo */}
           <div className="px-8 py-2 flex flex-col gap-7 mt-4">
 
-            {/* Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="flex items-center gap-3 bg-gray-50 rounded-xl p-4">
                 <div className="w-9 h-9 rounded-lg bg-[#dce8f7] flex items-center justify-center shrink-0">
@@ -222,7 +264,6 @@ export function VagaDetalhe() {
               </div>
             </div>
 
-            {/* Sobre a vaga */}
             <div>
               <p className="text-xs font-medium text-gray-400 mb-3">Sobre a vaga</p>
               {vaga.descricao === "Consulte o edital para mais informações sobre esta oportunidade." ? (
@@ -235,7 +276,6 @@ export function VagaDetalhe() {
               )}
             </div>
 
-            {/* Vagas disponíveis */}
             <div>
               <p className="text-xs font-medium text-gray-400 mb-3">Vagas disponíveis</p>
               <div className="flex gap-3 flex-wrap">
@@ -252,7 +292,6 @@ export function VagaDetalhe() {
               </div>
             </div>
 
-            {/* Requisitos */}
             <div>
               <p className="text-xs font-medium text-gray-400 mb-3">
                 Requisitos do processo seletivo
@@ -267,7 +306,6 @@ export function VagaDetalhe() {
             </div>
           </div>
 
-          {/* Rodapé */}
           <div className="px-8 py-4 border-t border-gray-100 flex items-center justify-between gap-3 flex-wrap">
             <div className="flex flex-wrap gap-2">
               {vaga.tags.map((tag) => (
