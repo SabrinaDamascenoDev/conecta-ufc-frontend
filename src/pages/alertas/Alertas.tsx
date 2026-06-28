@@ -240,7 +240,7 @@ export function Alertas() {
                   key={vaga.id}
                   vaga={vaga}
                   onSave={handleSave}
-                  onSaberMais={(id) => navigate(`/vaga/${id}`)}
+                  onSaberMais={(id) => navigate(`/vaga/${id}`, { state: { origem: "alertas" } })}
                 />
               ))}
             </div>

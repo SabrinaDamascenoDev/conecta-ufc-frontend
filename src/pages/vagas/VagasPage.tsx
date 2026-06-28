@@ -189,9 +189,6 @@ export function Vagas() {
                 </>
               )}
             </p>
-
-            {/* 👇 onChange agora só atualiza o estado local;
-                  o useEffect acima cuida de repassar ao hook */}
             <SortDropdown
               value={sort}
               onChange={(v) => setSort(v as SortValue)}
@@ -216,7 +213,6 @@ export function Vagas() {
             </div>
           )}
 
-          {/* 👇 usa `vagas` diretamente — ordenação vem do backend */}
           {!loading && !error && vagas.length > 0 && (
             <div className="flex flex-col gap-4">
               {vagas.map((vaga) => (
@@ -224,7 +220,7 @@ export function Vagas() {
                   key={vaga.id}
                   vaga={vaga}
                   onSave={handleSave}
-                  onSaberMais={(id) => navigate(`/vaga/${id}`)}
+                  onSaberMais={(id) => navigate(`/vaga/${id}`, { state: { origem: "vagas" } })}
                 />
               ))}
             </div>

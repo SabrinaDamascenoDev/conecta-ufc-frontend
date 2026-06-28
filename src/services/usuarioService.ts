@@ -15,6 +15,7 @@ export interface Usuario {
 export interface UsuarioPut {
   email: string;
   nome: string;
+  curso: string;
   oportunidades:string[];
 }
 let usuarioCache: Usuario | null = null;
@@ -71,18 +72,18 @@ export function clearUsuarioCache() {
   usuarioCache = null;
   usuarioCachePromise = null;
 }
-
-export async function putUsuario(): Promise<Usuario> {
+export async function putUsuario(dados: Partial<Usuario>): Promise<Usuario> {
   const response = await fetch(`${API_BASE}/usuarios/me`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
       ...loginService.getAuthHeader(),
     },
+    body: JSON.stringify(dados),
   });
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail ?? "Erro ao pegar os dados do usuário");
+    throw new Error(error.detail ?? "Erro ao atualizar os dados do usuário");
   }
   return response.json() as Promise<Usuario>;
 }
