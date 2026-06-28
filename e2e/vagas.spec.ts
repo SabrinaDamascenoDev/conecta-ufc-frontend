@@ -35,7 +35,7 @@ test.describe("VagasPage", () => {
   test("clica em 'Saiba mais' e navega para /vaga/:id", async ({ page }) => {
     await expect(page.locator(".animate-pulse").first()).not.toBeVisible({ timeout: 8_000 });
 
-    const botaoSaibaMais = page.getByRole("button", { name: /saiba mais/i }).first();
+  const botaoSaibaMais = page.getByRole("button", { name: /saber mais/i }).filter({ hasNot: page.locator("[disabled]") }).first();
     await expect(botaoSaibaMais).toBeVisible({ timeout: 5_000 });
     await botaoSaibaMais.click();
 
@@ -53,7 +53,7 @@ test.describe("VagasPage", () => {
   test("filtro rápido de programa atualiza a listagem", async ({ page }) => {
     await expect(page.locator(".animate-pulse").first()).not.toBeVisible({ timeout: 8_000 });
 
-    const filtroPibic = page.getByRole("button", { name: "P&D" }).first();
+    const filtroPibic = page.getByRole("button", { name: "PIBIC" }).first();
     if (await filtroPibic.isVisible()) {
       await filtroPibic.click();
       await page.waitForTimeout(600);

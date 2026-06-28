@@ -54,7 +54,7 @@ function EditalPlaceholder({ link }: { link: string }) {
 export function VagaDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { vagas, toggleSalvo, loading } = useOportunidades();
+  const { vagas, loading } = useOportunidades();
 
   const vaga: VagaMapeada | undefined = vagas.find((v) => v.id === Number(id));
   const [salvoLocal, setSalvoLocal] = useState<boolean | null>(null);
@@ -64,7 +64,6 @@ export function VagaDetalhe() {
   function handleToggleSalvo() {
     if (!vaga) return;
     setSalvoLocal(!salvo);
-    toggleSalvo(vaga.id);
   }
 
   if (loading) {
@@ -87,7 +86,7 @@ export function VagaDetalhe() {
 
   return (
     <div className="flex min-h-screen bg-white font-sans">
-      <Sidebar alertasCount={10} />
+      <Sidebar />
 
       <main className="flex flex-col flex-1 min-w-0 lg:pl-[262px]">
         {/* ── Topbar ── */}
