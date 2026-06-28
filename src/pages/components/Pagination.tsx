@@ -13,11 +13,9 @@ export function Pagination({ meta, onPageChange, disabled }: PaginationProps) {
 
   if (total_pages <= 1) return null;
 
-  // Calcula intervalo de itens exibidos
   const from = (current_page - 1) * size + 1;
   const to = Math.min(current_page * size, total_elements);
 
-  // Gera lista de páginas com reticências
   function getPages(): (number | "…")[] {
     if (total_pages <= 7) {
       return Array.from({ length: total_pages }, (_, i) => i + 1);
@@ -53,9 +51,7 @@ export function Pagination({ meta, onPageChange, disabled }: PaginationProps) {
         oportunidades
       </p>
 
-      {/* Controles */}
       <div className="flex items-center gap-1">
-        {/* Anterior */}
         <button
           onClick={() => onPageChange(current_page - 1)}
           disabled={!meta.has_previous || disabled}
