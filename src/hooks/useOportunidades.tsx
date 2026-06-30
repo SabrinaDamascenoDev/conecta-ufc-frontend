@@ -75,8 +75,6 @@ export interface OportunidadesParams {
   sort?: SortValue;
 }
 
-
-
 function diasRestantes(dataFim: string): number {
   const fim = new Date(dataFim);
   const hoje = new Date();
@@ -111,7 +109,6 @@ function formatarValor(remuneracao: number | string): string {
   if (!n || isNaN(n)) return "Consulte o edital";
   return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
-
 
 function normalizarTipo(tipo: string): string {
   return tipo.toUpperCase().trim().replace(/\s+/g, " ");
@@ -170,9 +167,6 @@ export function mapearOportunidade(o: OportunidadeAPI): VagaMapeada | null {
   const remuneracaoNum =
     typeof o.remuneracao === "string" ? parseFloat(o.remuneracao) : o.remuneracao;
 
-    console.log(o.data_inicio);
-console.log(new Date(o.data_inicio));
-
   return {
     id: o.id,
     titulo: o.titulo,
@@ -206,24 +200,39 @@ export const PROGRAMA_PARA_TIPO: Partial<Record<Programa, string>> = {
   Extensão: "Extensão",
 };
 
-
 async function fetchInvertido(
   fetchFn: (p: OportunidadesParams) => Promise<OportunidadesResponse>,
   params: OportunidadesParams,
   totalPagesCache: React.MutableRefObject<number | null>
 ): Promise<OportunidadesResponse> {
-  let totalPages = totalPagesCache.current;
+  const paginaVirtual = params.page ?? 1;
 
-  if (totalPages === null) {
-    const first = await fetchFn({ ...params, page: 1 });
-    totalPages = first.meta?.total_pages ?? 1;
-    totalPagesCache.current = totalPages;
+  if (totalPagesCache.current === null) {
+    const discovery = await fetchFn({ ...params, page: 1 });
+    totalPagesCache.current = discovery.meta?.total_pages ?? 1;
+
+    const totalPages = totalPagesCache.current;
+    const paginaReal = Math.max(totalPages - paginaVirtual + 1, 1);
+
+    const result = paginaReal === 1 ? discovery : await fetchFn({ ...params, page: paginaReal });
+
+    return {
+      ...result,
+      data: [...result.data].reverse(),
+      meta: result.meta
+        ? {
+            ...result.meta,
+            current_page: paginaVirtual,
+            has_next:     paginaVirtual < totalPages,
+            has_previous: paginaVirtual > 1,
+          }
+        : result.meta,
+    };
   }
 
-  const paginaVirtual = params.page ?? 1;
-  const paginaReal    = totalPages - paginaVirtual + 1;
-
-  const result = await fetchFn({ ...params, page: Math.max(paginaReal, 1) });
+  const totalPages = totalPagesCache.current;
+  const paginaReal = Math.max(totalPages - paginaVirtual + 1, 1);
+  const result = await fetchFn({ ...params, page: paginaReal });
 
   return {
     ...result,
@@ -239,9 +248,7 @@ async function fetchInvertido(
   };
 }
 
-
-
-function criarEscolherFetch(
+export function criarEscolherFetch(
   totalPagesCache: React.MutableRefObject<number | null>
 ) {
   return function escolherFetch(
@@ -266,7 +273,6 @@ function criarEscolherFetch(
   };
 }
 
-
 export interface UseOportunidadesReturn {
   vagas: VagaMapeada[];
   meta: PaginationMeta;
@@ -275,6 +281,7 @@ export interface UseOportunidadesReturn {
   setVagas: React.Dispatch<React.SetStateAction<VagaMapeada[]>>;
   goToPage: (page: number) => void;
   setParams: (partial: Partial<Omit<OportunidadesParams, "page">>) => void;
+  currentParams: OportunidadesParams;
 }
 
 const DEFAULT_META: PaginationMeta = {
@@ -300,9 +307,9 @@ export function useOportunidades(): UseOportunidadesReturn {
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
 
-  const favoritosIdsRef  = useRef(favoritosIds);
-  const totalPagesCache  = useRef<number | null>(null);
-  const escolherFetch    = useRef(criarEscolherFetch(totalPagesCache));
+  const favoritosIdsRef = useRef(favoritosIds);
+  const totalPagesCache = useRef<number | null>(null);
+  const escolherFetch   = useRef(criarEscolherFetch(totalPagesCache));
 
   useEffect(() => {
     favoritosIdsRef.current = favoritosIds;
@@ -361,14 +368,17 @@ export function useOportunidades(): UseOportunidadesReturn {
       setParamsState((prev) => {
         const next = { ...prev, ...partial, page: 1 };
 
-        if (
+        const filtrosIguais =
           next.busca           === prev.busca           &&
           next.tipo            === prev.tipo            &&
           next.origem          === prev.origem          &&
           next.sort            === prev.sort            &&
           next.remuneracao_min === prev.remuneracao_min &&
-          next.remuneracao_max === prev.remuneracao_max
-        ) return prev;
+          next.remuneracao_max === prev.remuneracao_max &&
+          next.data_inicio     === prev.data_inicio     &&
+          next.data_fim        === prev.data_fim;
+
+        if (filtrosIguais) return prev;
 
         totalPagesCache.current = null;
 
@@ -378,5 +388,5 @@ export function useOportunidades(): UseOportunidadesReturn {
     []
   );
 
-  return { vagas, setVagas, loading, error, meta, goToPage, setParams };
+  return { vagas, setVagas, loading, error, meta, goToPage, setParams, currentParams: params };
 }

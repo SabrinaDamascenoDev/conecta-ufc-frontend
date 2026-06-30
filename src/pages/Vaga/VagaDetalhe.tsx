@@ -1,6 +1,6 @@
-
+// VagaDetalhe.tsx
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BookmarkIcon,
   Clock,
@@ -21,9 +21,14 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Sidebar } from "../components/Sidebar";
 import Sair from "../components/Dialogs/Sair";
-import { mapearOportunidade, type VagaMapeada, type Programa } from "@/hooks/useOportunidades";
+import {
+  mapearOportunidade,
+  criarEscolherFetch,
+  type VagaMapeada,
+  type Programa,
+  type OportunidadesParams,
+} from "@/hooks/useOportunidades";
 import { getAlertas } from "@/services/vagasAlertasService";
-import { fetchOportunidades } from "@/services/vagasService";
 import { useFavoritos } from "@/context/FavoritosContext";
 import { getUsuario, type Usuario } from "@/services/usuarioService";
 
@@ -70,6 +75,8 @@ export function VagaDetalhe() {
   const location = useLocation();
   const origem: "vagas" | "alertas" = location.state?.origem ?? "vagas";
 
+  const fetchParams: OportunidadesParams | undefined = location.state?.fetchParams;
+
   const { favoritosIds, toggleFavorito } = useFavoritos();
 
   const [vaga, setVaga] = useState<VagaMapeada | null>(null);
@@ -77,6 +84,8 @@ export function VagaDetalhe() {
   const [error, setError] = useState<string | null>(null);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
 
+  const totalPagesCache = useRef<number | null>(null);
+  const escolherFetch = useRef(criarEscolherFetch(totalPagesCache));
 
   useEffect(() => {
     getUsuario()
@@ -89,20 +98,33 @@ export function VagaDetalhe() {
     setLoading(true);
     setError(null);
 
-    const fetchFn = origem === "alertas"
-      ? () => getAlertas({ size: 20 })
-      : () => fetchOportunidades({ size: 20 });
+    async function carregar() {
+      try {
+        let data;
 
-    fetchFn()
-      .then(({ data }) => {
+        if (origem === "alertas") {
+          const resp = await getAlertas({ size: 20 });
+          data = resp.data;
+        } else {
+          const resp = await escolherFetch.current(fetchParams ?? { size: 20, page: 1 });
+          data = resp.data;
+        }
+
         const raw = data.find((o) => o.id === Number(id));
         if (!raw) throw new Error("Vaga não encontrada");
+
         const mapeada = mapearOportunidade(raw);
         if (!mapeada) throw new Error("Vaga não encontrada");
+
         setVaga(mapeada);
-      })
-      .catch((e) => setError(e instanceof Error ? e.message : "Erro ao carregar vaga"))
-      .finally(() => setLoading(false));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Erro ao carregar vaga");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    carregar();
   }, [id, origem]);
 
   const salvo = vaga ? favoritosIds.has(vaga.id) : false;
