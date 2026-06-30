@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "../components/Sidebar";
 import { SearchBar } from "../components/Search";
@@ -9,7 +10,7 @@ import { type AdvancedFilters } from "../components/FilterSheet";
 import {
   useOportunidades,
   type Programa,
-  type SortValue,      
+  type SortValue,
   PROGRAMA_PARA_TIPO,
 } from "@/hooks/useOportunidades";
 import { useFavoritos } from "@/context/FavoritosContext";
@@ -81,7 +82,7 @@ export function Vagas() {
 
   const debouncedSearch = useDebounce(search, 400);
   const { toggleFavorito } = useFavoritos();
-  const { vagas, loading, error, meta, goToPage, setParams } = useOportunidades();
+  const { vagas, loading, error, meta, goToPage, setParams, currentParams } = useOportunidades();
 
   useEffect(() => {
     const tipo: string | undefined = (() => {
@@ -107,12 +108,12 @@ export function Vagas() {
       origem,
       remuneracao_min,
       remuneracao_max,
-      sort, 
+      sort,
     });
   }, [
     debouncedSearch,
     filtro,
-    sort,                        
+    sort,
     advancedFilters.programas,
     advancedFilters.origem,
     advancedFilters.valor,
@@ -220,7 +221,18 @@ export function Vagas() {
                   key={vaga.id}
                   vaga={vaga}
                   onSave={handleSave}
-                  onSaberMais={(id) => navigate(`/vaga/${id}`, { state: { origem: "vagas" } })}
+                  onSaberMais={(id) =>
+                    navigate(`/vaga/${id}`, {
+                      state: {
+                        origem: "vagas",
+                        // Não existe endpoint de busca por ID no backend.
+                        // Reenviamos os mesmos parâmetros (filtros/ordenação/página)
+                        // usados na listagem, pra garantir que a vaga
+                        // clicada esteja no resultado refeito na tela de detalhe.
+                        fetchParams: { ...currentParams, page: meta.current_page, size: meta.size },
+                      },
+                    })
+                  }
                 />
               ))}
             </div>
